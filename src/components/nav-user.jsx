@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -42,7 +43,7 @@ export function NavUser({ user }) {
         },
       });
   
-      console.log('Response Status:', response.status); // Log status respons
+      console.log('Response Status:', response.status); 
   
       if (response.ok) {
         localStorage.removeItem("token");

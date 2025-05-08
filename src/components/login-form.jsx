@@ -46,13 +46,14 @@ export function LoginForm({ className, ...props }) {
 
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
-
+        localStorage.setItem("user", JSON.stringify(data.user));
+    
         alert("Login berhasil!");
-        router.push("/dashboard");
-        //console.log(data);
-      } else {
+        const redirectPath = new URL(data.redirect).pathname;
+        router.push(redirectPath);
+    } else {
         setError(data.message || "Login gagal.");
-      }
+    }
     } catch (err) {
       console.error(err);
       setError("Gagal terhubung ke server.");
