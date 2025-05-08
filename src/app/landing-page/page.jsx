@@ -430,10 +430,20 @@ export default function Page() {
           
           <div className="mt-16 bg-green-50 rounded-xl p-8 text-center">
             <h3 className="text-2xl font-bold text-green-800 mb-4">Cara Reservasi Fasilitas</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 mt-8">
               <div className="flex flex-col items-center">
                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
                   <span className="text-2xl font-bold">1</span>
+                </div>
+                <h4 className="font-semibold text-green-700 mb-2">Register/Login</h4>
+                <p className="text-gray-600 text-sm">
+                  Register atau login terlebih dahulu
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
+                  <span className="text-2xl font-bold">2</span>
                 </div>
                 <h4 className="font-semibold text-green-700 mb-2">Pilih Fasilitas</h4>
                 <p className="text-gray-600 text-sm">
@@ -443,7 +453,7 @@ export default function Page() {
               
               <div className="flex flex-col items-center">
                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">2</span>
+                  <span className="text-2xl font-bold">3</span>
                 </div>
                 <h4 className="font-semibold text-green-700 mb-2">Isi Formulir</h4>
                 <p className="text-gray-600 text-sm">
@@ -453,7 +463,7 @@ export default function Page() {
               
               <div className="flex flex-col items-center">
                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">3</span>
+                  <span className="text-2xl font-bold">4</span>
                 </div>
                 <h4 className="font-semibold text-green-700 mb-2">Konfirmasi</h4>
                 <p className="text-gray-600 text-sm">
