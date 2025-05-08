@@ -45,6 +45,8 @@ export function LoginForm({ className, ...props }) {
       const data = await res.json();
 
       if (res.ok) {
+        localStorage.setItem("token", data.access_token);
+
         alert("Login berhasil!");
         router.push("/dashboard");
         //console.log(data);
