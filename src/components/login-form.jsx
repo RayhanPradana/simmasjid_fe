@@ -8,6 +8,8 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
+
 
 export function LoginForm({ className, ...props }) {
   const [form, setForm] = useState({
@@ -45,7 +47,7 @@ export function LoginForm({ className, ...props }) {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Login berhasil!");
+        toast.success("🎉 Login berhasil! Selamat datang kembali."); // ✅ Gantikan alert
         router.push("/dashboard");
         //console.log(data);
       } else {

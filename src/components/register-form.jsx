@@ -9,6 +9,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Eye, EyeOff } from "lucide-react";
 import { useRouter } from "next/navigation";
+import toast from "react-hot-toast";
 
 export function RegisterForm({ className, ...props }) {
   const router = useRouter();
@@ -69,7 +70,7 @@ export function RegisterForm({ className, ...props }) {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Registrasi berhasil!");
+        toast.success("🎉 Registrasi berhasil! Silakan login.");
         router.push("/login");
       } else if (data.errors) {
         setError(data.errors); 
