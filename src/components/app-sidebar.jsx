@@ -85,16 +85,16 @@ const data = {
 export function AppSidebar({ ...props }) {
   return (
     <Sidebar collapsible="icon" {...props}>
-      <SidebarHeader>
+      <SidebarHeader className="pl-4">
         <TeamSwitcher teams={data.teams} />
       </SidebarHeader>
-      <SidebarContent>
+      <SidebarContent className="pl-4">
         <NavMain items={data.navMain} />
       </SidebarContent>
-      <SidebarFooter>
+      <SidebarFooter className="pl-4">
         <NavUser user={data.user} />
       </SidebarFooter>
-      <SidebarRail />
+      <SidebarRail className="flex justify-end pr-2" />
     </Sidebar>
   );
 }

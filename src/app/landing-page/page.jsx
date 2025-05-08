@@ -119,18 +119,20 @@ export default function Page() {
 
           {/* Mobile Menu Button */}
           <div className="flex items-center gap-4">
-            <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors">
-              <User size={16} />
-              <span className="hidden sm:inline">Login</span>
-            </button>
-            
+            <Link href="/login">
+                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors">
+                <User size={16} />
+                <span className="hidden sm:inline">Login</span>
+                </button>
+            </Link>
+
             <button 
-              className="md:hidden text-green-600 p-2" 
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="md:hidden text-green-600 p-2" 
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
             >
-              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
             </button>
-          </div>
+            </div>
         </div>
 
         {/* Mobile Navigation Menu */}
@@ -206,7 +208,7 @@ export default function Page() {
       <section id="about" className="relative py-24 bg-white/100">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-green-800 mb-2">Tentang SIMASJID</h2>
+            <h2 className="text-4xl font-bold text-green-800 mb-2">Tentang</h2>
             <div className="w-24 h-1 bg-green-600 mx-auto"></div>
           </div>
           
