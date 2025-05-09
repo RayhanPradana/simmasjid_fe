@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import {
+  Home,
   Users,
   Wallet,
   CalendarCheck,
@@ -11,6 +12,7 @@ import {
 } from "lucide-react";
 
 import { NavMain } from "@/components/nav-main";
+import Link from 'next/link';
 import { NavProjects } from "@/components/nav-projects";
 import { NavUser } from "@/components/nav-user";
 import { TeamSwitcher } from "@/components/team-switcher";
@@ -49,7 +51,7 @@ export function AppSidebar({ ...props }) {
     ],
     navMain: [
       {
-        title: "User",
+        title: "Pengguna",
         url: "/dashboard/user",
         icon: Users,
         isActive: false,
@@ -109,3 +111,4 @@ export function AppSidebar({ ...props }) {
     </Sidebar>
   );
 }
+

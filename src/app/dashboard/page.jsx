@@ -1,6 +1,3 @@
-"use client";
-
-import React, { useEffect, useState } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,14 +5,14 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb";
-import { Separator } from "@/components/ui/separator";
+} from "@/components/ui/breadcrumb"
+import { Separator } from "@/components/ui/separator"
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/app-sidebar";
+} from "@/components/ui/sidebar"
+import { AppSidebar } from "@/components/app-sidebar"
 import {
   CalendarCheck2,
   CreditCard,
@@ -23,21 +20,9 @@ import {
   Users,
   Building2,
   ArrowDownCircle,
-} from "lucide-react";
+} from "lucide-react"
 
 export default function Page() {
-  const [userName, setUserName] = useState("Admin");
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        const user = JSON.parse(storedUser);
-        setUserName(user.name);
-      }
-    }
-  }, []);
-
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -64,7 +49,7 @@ export default function Page() {
         {/* Konten Dashboard */}
         <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
           <section>
-            <h1 className="text-3xl font-bold text-[#00a63e]">Selamat {userName}!</h1>
+            <h1 className="text-3xl font-bold text-[#00a63e]">Selamat datang di Dashboard, Admin Fulan!</h1>
             <p className="text-gray-700 mt-1">Berikut ringkasan aktivitas Masjid hari ini.</p>
           </section>
 
@@ -118,14 +103,14 @@ export default function Page() {
           <section className="mt-6 bg-white rounded-xl shadow p-6 text-gray-700">
             <h2 className="text-xl font-semibold mb-2 text-[#00a63e]">Informasi Tambahan</h2>
             <p>
-              SIMASJID membantu pengelolaan kegiatan, keuangan, dan fasilitas masjid secara modern dan efisien.
+              SIMASJID membantu pengelolaan kegiatan, keuangan, dan fasilitas masjid secara modern dan efisien. 
               Anda dapat menambahkan berita terbaru, mencatat transaksi, mengatur jadwal, hingga memantau reservasi fasilitas.
             </p>
           </section>
         </main>
       </SidebarInset>
     </SidebarProvider>
-  );
+  )
 }
 
 // Komponen Kartu Statistik
@@ -140,5 +125,5 @@ function StatCard({ title, value, icon, color }) {
         <h3 className="text-lg font-bold">{value}</h3>
       </div>
     </div>
-  );
+  )
 }

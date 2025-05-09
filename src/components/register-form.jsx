@@ -99,7 +99,7 @@ export function RegisterForm({ className, ...props }) {
                 />
                 <h1 className="text-2xl font-bold">Buat Akun Anda</h1>
                 <p className="text-muted-foreground text-balance">
-                  Daftar untuk akun baru SimMasjid
+                  Daftar untuk akun baru SiMasjid
                 </p>
               </div>
 
