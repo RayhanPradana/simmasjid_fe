@@ -47,12 +47,12 @@ export function LoginForm({ className, ...props }) {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("🎉 Login berhasil! Selamat datang kembali."); // ✅ Gantikan alert
+        alert("Login berhasil!");
         router.push("/dashboard");
         //console.log(data);
       } else {
         setError(data.message || "Login gagal.");
-      }
+    }
     } catch (err) {
       console.error(err);
       setError("Gagal terhubung ke server.");
