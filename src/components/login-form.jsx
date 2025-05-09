@@ -10,7 +10,6 @@ import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 
-
 export function LoginForm({ className, ...props }) {
   const [form, setForm] = useState({
     email: "",
@@ -48,12 +47,13 @@ export function LoginForm({ className, ...props }) {
 
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
-
-        // alert("Login berhasil!");
-        toast.success("🎉 Login berhasil! Selamat datang kembali."); // ✅ Gantikan alert
-        router.push("/dashboard");
-        //console.log(data);
-      } else {
+        localStorage.setItem("user", JSON.stringify(data.user));
+    
+        //alert("Login berhasil!");
+        toast.success("🎉 Login berhasil! Selamat datang kembali.");
+        const redirectPath = new URL(data.redirect).pathname;
+        router.push(redirectPath);
+    } else {
         setError(data.message || "Login gagal.");
     }
     } catch (err) {
@@ -78,7 +78,7 @@ export function LoginForm({ className, ...props }) {
                 />
                 <h1 className="text-2xl font-bold">Selamat Datang</h1>
                 <p className="text-muted-foreground text-balance">
-                  Login ke akun SimMasjid
+                  Login ke akun SiMasjid
                 </p>
               </div>
 

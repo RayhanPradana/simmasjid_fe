@@ -2,8 +2,11 @@
 
 import * as React from "react";
 import Link from 'next/link';
+import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import { ChevronsUpDown,  Settings } from "lucide-react";
+import toast from "react-hot-toast";
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -12,6 +15,15 @@ import {
   NavigationMenuContent,
   NavigationMenuLink
 } from "@/components/ui/navigation-menu";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { 
   Calendar, 
   Clock, 
@@ -24,10 +36,15 @@ import {
   Newspaper,
   User,
   Menu,
-  X
+  X,
+  LogOut,
+  isLoggedIn,
 } from "lucide-react";
 
 export default function Page() {
+
+    const router = useRouter();
+  
     const [scrollY, setScrollY] = useState(0);
     const [activeSection, setActiveSection] = useState("home");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -40,6 +57,8 @@ export default function Page() {
       { id: "news", label: "Berita", icon: <Newspaper size={16} /> },
     ];
   
+    const backendUrl = "http://127.0.0.1:8000";
+
     // Function to detect active section based on scroll
     useEffect(() => {
       const handleScroll = () => {
@@ -75,6 +94,87 @@ export default function Page() {
         setMobileMenuOpen(false); // Close mobile menu after clicking
       }
     };
+
+      const [isLoggedIn, setIsLoggedIn] = useState(false);
+      const [userName, setUserName] = useState("Admin");
+      const [userImage, setUserImage] = useState(null);
+    
+      useEffect(() => {
+        if (typeof window !== "undefined") {
+          const storedUser = localStorage.getItem("user");
+          if (storedUser) {
+            try {
+              const user = JSON.parse(storedUser);
+              setUserName(user.name);
+    
+              if (user.image) {
+                setUserImage(user.image);
+              }
+            } catch (error) {
+              console.error("Failed to parse user from localStorage:", error);
+            }
+          }
+        }
+      }, []);
+    
+      const handleLogout = async () => {
+        try {
+          
+          const token = localStorage.getItem('token');
+    
+          if (!token) {
+            alert("Token tidak ditemukan, Anda perlu login kembali.");
+            return;
+          }
+      
+          const response = await fetch('http://localhost:8000/api/logout', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`,
+              'Accept': 'application/json',
+            },
+          });
+      
+          console.log('Response Status:', response.status); 
+      
+          if (response.ok) {
+            localStorage.removeItem("token");
+            localStorage.removeItem("user"); // bersihkan user juga
+            setIsLoggedIn(false); // set kembali jadi false
+            router.push("/landing-page");
+            toast.success("🎉 Logout berhasil!");
+          } else {
+            const errorData = await response.json();
+            console.error("Logout gagal:", errorData.message);
+            alert("Logout gagal: " + (errorData.message || 'Unknown error'));
+          }
+        } catch (error) {
+          console.error("Error saat logout:", error);
+          alert("Terjadi kesalahan saat logout");
+        }
+      };
+
+      useEffect(() => {
+        if (typeof window !== "undefined") {
+          const storedUser = localStorage.getItem("user");
+          const token = localStorage.getItem("token");
+      
+          if (storedUser && token) {
+            try {
+              const user = JSON.parse(storedUser);
+              setUserName(user.name || "...");
+              if (user.image) {
+                setUserImage(user.image);
+              }
+              setIsLoggedIn(true); // Set sebagai login
+            } catch (error) {
+              console.error("Gagal parsing user dari localStorage:", error);
+            }
+          }
+        }
+      }, []);
+      
 
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-green-50 to-white">
@@ -117,22 +217,61 @@ export default function Page() {
             </NavigationMenu>
           </div>
 
-          {/* Mobile Menu Button */}
           <div className="flex items-center gap-4">
+          {/* Tombol Login (hanya muncul jika belum login) */}
+          {!isLoggedIn && (
             <Link href="/login">
-                <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors">
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors">
                 <User size={16} />
                 <span className="hidden sm:inline">Login</span>
-                </button>
+              </button>
             </Link>
+          )}
 
-            <button 
-                className="md:hidden text-green-600 p-2" 
-                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-            >
-                {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
-            </button>
+          {/* Dropdown User (muncul saat login di desktop) */}
+          {isLoggedIn && (
+            <div className="hidden md:flex items-center gap-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer">
+                  {userImage ? (
+                    <img
+                      src={userImage}
+                      alt="User Profile"
+                      className="w-8 h-8 rounded-full object-cover"
+                      onError={(e) => {
+                        e.target.src = "/image/logo.png";
+                      }}
+                    />
+                  ) : (
+                    <img
+                      src="/image/logo.png"
+                      alt="Default Logo"
+                      className="w-8 h-8 rounded-full object-cover"
+                    />
+                  )}
+                  <span className="text-gray-700">{userName}</span>
+                  <ChevronsUpDown className="ml-auto size-4" />
+                </DropdownMenuTrigger>
+
+                <DropdownMenuContent className="w-56">
+                  <DropdownMenuLabel>Akun</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+                    <LogOut size={16} className="mr-2" /> Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
+          )}
+
+          {/* Menu Mobile Toggle */}
+          <button
+            className="md:hidden text-green-600 p-2"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+          >
+            {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+          </button>
+        </div>
         </div>
 
         {/* Mobile Navigation Menu */}
