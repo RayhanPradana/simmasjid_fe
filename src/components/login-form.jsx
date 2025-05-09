@@ -49,7 +49,7 @@ export function LoginForm({ className, ...props }) {
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
 
-        alert("Login berhasil!");
+        // alert("Login berhasil!");
         toast.success("🎉 Login berhasil! Selamat datang kembali."); // ✅ Gantikan alert
         router.push("/dashboard");
         //console.log(data);
