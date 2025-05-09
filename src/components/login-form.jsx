@@ -55,7 +55,7 @@ export function LoginForm({ className, ...props }) {
         //console.log(data);
       } else {
         setError(data.message || "Login gagal.");
-      }
+    }
     } catch (err) {
       console.error(err);
       setError("Gagal terhubung ke server.");
