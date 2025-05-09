@@ -47,10 +47,13 @@ export function LoginForm({ className, ...props }) {
       const data = await res.json();
 
       if (res.ok) {
-        alert("Login berhasil!");
-        router.push("/dashboard");
-        //console.log(data);
-      } else {
+        localStorage.setItem("token", data.access_token);
+        localStorage.setItem("user", JSON.stringify(data.user));
+    
+        toast.success("🎉 Login berhasil!.");
+        const redirectPath = new URL(data.redirect).pathname;
+        router.push(redirectPath);
+    } else {
         setError(data.message || "Login gagal.");
     }
     } catch (err) {

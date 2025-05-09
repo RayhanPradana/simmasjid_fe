@@ -70,7 +70,7 @@ export function RegisterForm({ className, ...props }) {
       const data = await res.json();
 
       if (res.ok) {
-        toast.success("🎉 Registrasi berhasil! Silakan login.");
+        toast.success("🎉 Registrasi berhasil! Silahkan Login.");
         router.push("/login");
       } else if (data.errors) {
         setError(data.errors); 
