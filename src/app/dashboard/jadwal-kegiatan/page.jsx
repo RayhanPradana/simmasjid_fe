@@ -568,6 +568,7 @@ export default function Page() {
                     <Input
                       id="waktu"
                       name="waktu"
+                      type="time"
                       value={formData.waktu}
                       onChange={handleInputChange}
                       placeholder="Contoh: 09:00-12:00"
