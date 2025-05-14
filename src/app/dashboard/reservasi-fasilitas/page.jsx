@@ -23,6 +23,7 @@ import {
   Edit,
   Trash2,
   Loader2,
+  AlertCircle,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -60,13 +61,14 @@ import {
   SelectTrigger,
   SelectValue
 } from "@/components/ui/select";
-import { useToast } from "@/components/ui/use-toast"
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import toast from "react-hot-toast";
+
 
 // API base URL
 const API_BASE_URL = "http://127.0.0.1:8000/api/reservasi"
 
 export default function Page() {
-  const { toast } = useToast()
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -76,6 +78,8 @@ export default function Page() {
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
   const [isLoading, setIsLoading] = useState(false);
+  const [validationErrors, setValidationErrors] = useState([]);
+  
   // Form data state
   const [formData, setFormData] = useState({
     acara_id: "",
@@ -111,19 +115,11 @@ export default function Page() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          toast({
-            title: "Sesi berakhir",
-            description: "Sesi login Anda telah berakhir. Silakan login kembali.",
-            variant: "destructive",
-          })
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
           return
         }
 
-        toast({
-          title: "Error",
-          description: `Gagal memuat data: ${response.status}`,
-          variant: "destructive",
-        })
+        toast.error(`Gagal memuat data: ${response.status}`);
         return
       }
 
@@ -156,19 +152,11 @@ export default function Page() {
         console.error("Invalid data format received:", result)
         setData([])
         setFilteredData([])
-        toast({
-          title: "Error",
-          description: "Format data tidak valid",
-          variant: "destructive",
-        })
+        toast.error("Format data tidak valid");
       }
     } catch (error) {
       console.error("Failed to fetch reservations:", error)
-      toast({
-        title: "Error",
-        description: "Gagal memuat data reservasi",
-        variant: "destructive",
-      })
+      toast.error("Gagal memuat data reservasi");
       setData([])
       setFilteredData([])
     } finally {
@@ -225,16 +213,74 @@ export default function Page() {
       
     } catch (error) {
       console.error("Failed to fetch related data:", error)
-      toast({
-        title: "Error",
-        description: "Gagal memuat data terkait",
-        variant: "destructive",
-      })
+      toast.error("Gagal memuat data terkait");
     }
   }
 
+  // Check for time slot conflicts
+  const checkTimeConflicts = () => {
+    // Reset previous validation errors
+    setValidationErrors([]);
+    
+    if (!formData.fasilitas_id || !formData.tgl_reservasi || !formData.jam_mulai || !formData.jam_selesai) {
+      return false; // Not enough data to check conflicts
+    }
+
+    // Convert times to minutes for easier comparison
+    const convertTimeToMinutes = (time) => {
+      const [hours, minutes] = time.split(':').map(Number);
+      return hours * 60 + minutes;
+    };
+
+    const newStartTime = convertTimeToMinutes(formData.jam_mulai);
+    const newEndTime = convertTimeToMinutes(formData.jam_selesai);
+    
+    // Basic validation - end time must be after start time
+    if (newEndTime <= newStartTime) {
+      setValidationErrors(prev => [...prev, "Jam selesai harus lebih besar dari jam mulai"]);
+      return true;
+    }
+
+    // Check for overlaps with existing reservations
+    let hasConflict = false;
+    
+    data.forEach(reservation => {
+      // Skip checking against the current reservation if we're editing
+      if (isEditing && reservation.id == formData.id) return;
+      
+      // Only check same facility and same date
+      if (reservation.fasilitas_id == formData.fasilitas_id && 
+          reservation.tgl_reservasi === formData.tgl_reservasi) {
+        
+        const existingStartTime = convertTimeToMinutes(reservation.jam_mulai);
+        const existingEndTime = convertTimeToMinutes(reservation.jam_selesai);
+        
+        // Check for overlap
+        // Two time ranges overlap if one's start time is before the other's end time
+        // AND that same range's end time is after the other's start time
+        if ((newStartTime < existingEndTime && newEndTime > existingStartTime)) {
+          hasConflict = true;
+          const facilityName = getFasilitasName(reservation.fasilitas_id);
+          const existingUser = getUserName(reservation.user_id);
+          
+          setValidationErrors(prev => [
+            ...prev, 
+            `Konflik jadwal: Fasilitas ${facilityName} sudah direservasi oleh ${existingUser} pada jam ${reservation.jam_mulai} - ${reservation.jam_selesai}`
+          ]);
+        }
+      }
+    });
+    
+    return hasConflict;
+  };
+
   // Create new reservation
   const createReservation = async () => {
+    // First check for time conflicts
+    if (checkTimeConflicts()) {
+      return false;
+    }
+    
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
@@ -258,27 +304,16 @@ export default function Page() {
       
       if (!response.ok) {
         const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.message || `Gagal menambah data: ${response.status}`,
-          variant: "destructive",
-        })
+        toast.error(errorData.message || `Gagal menambah data: ${response.status}`);
         return false
       }
       
-      toast({
-        title: "Berhasil",
-        description: "Data reservasi berhasil ditambahkan",
-      })
+      toast.success("Data reservasi berhasil ditambahkan");
       return true
       
     } catch (error) {
       console.error("Failed to create reservation:", error)
-      toast({
-        title: "Error",
-        description: "Gagal menambah data reservasi",
-        variant: "destructive",
-      })
+      toast.error("Gagal menambah data reservasi");
       return false
     } finally {
       setIsLoading(false)
@@ -287,6 +322,11 @@ export default function Page() {
   
   // Update existing reservation
   const updateReservation = async () => {
+    // First check for time conflicts
+    if (checkTimeConflicts()) {
+      return false;
+    }
+    
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
@@ -310,27 +350,16 @@ export default function Page() {
       
       if (!response.ok) {
         const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.message || `Gagal memperbarui data: ${response.status}`,
-          variant: "destructive",
-        })
+        toast.error(errorData.message || `Gagal memperbarui data: ${response.status}`);
         return false
       }
       
-      toast({
-        title: "Berhasil",
-        description: "Data reservasi berhasil diperbarui",
-      })
+      toast.success("Data reservasi berhasil diperbarui");
       return true
       
     } catch (error) {
       console.error("Failed to update reservation:", error)
-      toast({
-        title: "Error",
-        description: "Gagal memperbarui data reservasi",
-        variant: "destructive",
-      })
+      toast.error("Gagal memperbarui data reservasi");
       return false
     } finally {
       setIsLoading(false)
@@ -354,27 +383,16 @@ export default function Page() {
       
       if (!response.ok) {
         const errorData = await response.json()
-        toast({
-          title: "Error",
-          description: errorData.message || `Gagal menghapus data: ${response.status}`,
-          variant: "destructive",
-        })
+        toast.error(errorData.message || `Gagal menghapus data: ${response.status}`);
         return false
       }
       
-      toast({
-        title: "Berhasil",
-        description: "Data reservasi berhasil dihapus",
-      })
+      toast.success("Data reservasi berhasil dihapus");
       return true
       
     } catch (error) {
       console.error("Failed to delete reservation:", error)
-      toast({
-        title: "Error",
-        description: "Gagal menghapus data reservasi",
-        variant: "destructive",
-      })
+      toast.error("Gagal menghapus data reservasi");
       return false
     } finally {
       setIsLoading(false)
@@ -413,6 +431,11 @@ export default function Page() {
         ...prev,
         [name]: value
       }));
+    }
+    
+    // Clear validation errors when inputs change
+    if (["fasilitas_id", "tgl_reservasi", "jam_mulai", "jam_selesai"].includes(name)) {
+      setValidationErrors([]);
     }
   };
 
@@ -474,6 +497,7 @@ export default function Page() {
       status_pembayaran: "unpaid"
     })
     setIsEditing(false)
+    setValidationErrors([])
     setIsAddModalOpen(true)
   }
 
@@ -490,6 +514,7 @@ export default function Page() {
       status_pembayaran: item.status_pembayaran
     })
     setIsEditing(true)
+    setValidationErrors([])
     setIsAddModalOpen(true)
   }
 
@@ -498,17 +523,49 @@ export default function Page() {
     setIsDeleteModalOpen(true)
   }
 
+  // Validate time format
+  const validateTimeFormat = (time) => {
+    return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
+  }
+  
   // Handle form submission for both create and update
   const handleFormSubmit = async () => {
     try {
-      // Validate form input
-      if (!formData.acara_id || !formData.fasilitas_id || !formData.user_id || 
-          !formData.tgl_reservasi || !formData.jam_mulai || !formData.jam_selesai) {
-        toast({
-          title: "Validasi Gagal",
-          description: "Mohon lengkapi semua data yang diperlukan.",
-          variant: "destructive",
-        });
+      // Clear previous validation errors
+      setValidationErrors([]);
+      
+      // Basic form validation
+      const errors = [];
+      
+      if (!formData.acara_id) errors.push("Acara harus dipilih");
+      if (!formData.fasilitas_id) errors.push("Fasilitas harus dipilih");
+      if (!formData.user_id) errors.push("Penyewa harus dipilih");
+      if (!formData.tgl_reservasi) errors.push("Tanggal reservasi harus diisi");
+      
+      if (!formData.jam_mulai) {
+        errors.push("Jam mulai harus diisi");
+      } else if (!validateTimeFormat(formData.jam_mulai)) {
+        errors.push("Format jam mulai tidak valid (HH:MM)");
+      }
+      
+      if (!formData.jam_selesai) {
+        errors.push("Jam selesai harus diisi");
+      } else if (!validateTimeFormat(formData.jam_selesai)) {
+        errors.push("Format jam selesai tidak valid (HH:MM)");
+      }
+      
+      // Check if end time is after start time
+      if (formData.jam_mulai && formData.jam_selesai) {
+        const startTime = new Date(`2000-01-01T${formData.jam_mulai}`);
+        const endTime = new Date(`2000-01-01T${formData.jam_selesai}`);
+        
+        if (endTime <= startTime) {
+          errors.push("Jam selesai harus lebih besar dari jam mulai");
+        }
+      }
+      
+      if (errors.length > 0) {
+        setValidationErrors(errors);
         return;
       }
 
@@ -538,11 +595,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error("Error saving data:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat menyimpan data",
-        variant: "destructive",
-      });
+      toast.error("Terjadi kesalahan saat menyimpan data");
     }
   };
 
@@ -715,43 +768,53 @@ export default function Page() {
                               <Button
                                 variant="outline"
                                 size="sm"
-                                className="h-8 w-8 p-0 text-red-500"
+                                className="h-8 w-8 p-0"
                                 onClick={() => handleDeleteClick(item)}
                               >
-                                <Trash2 className="h-4 w-4" />
+                                <Trash2 className="h-4 w-4 text-red-500" />
                               </Button>
                             </div>
                           </div>
                         </div>
                       ))
                     ) : (
-                      <div className="text-center py-6 text-gray-500 col-span-10">
-                        Tidak ada data reservasi
+                      <div className="flex justify-center items-center py-8 text-gray-500 col-span-11">
+                        {searchTerm ? (
+                          <>
+                            <AlertCircle className="h-5 w-5 mr-2" />
+                            <span>Tidak ada data yang sesuai dengan pencarian</span>
+                          </>
+                        ) : (
+                          <>
+                            <AlertCircle className="h-5 w-5 mr-2" />
+                            <span>Belum ada data reservasi</span>
+                          </>
+                        )}
                       </div>
                     )}
                   </div>
                 </div>
-              </CardContent>
-              <CardFooter>
-                {totalPages > 1 && (
-                  <div className="flex items-center justify-center w-full">
-                    <div className="flex gap-1">
+
+                {/* Pagination */}
+                {filteredData.length > itemsPerPage && (
+                  <div className="flex justify-center mt-4">
+                    <nav className="flex space-x-1">
                       <Button
                         variant="outline"
                         size="sm"
                         onClick={() => paginate(currentPage - 1)}
                         disabled={currentPage === 1}
                       >
-                        Sebelumnya
+                        Prev
                       </Button>
-                      {Array.from({ length: totalPages }, (_, i) => (
+                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
                         <Button
-                          key={i + 1}
-                          variant={currentPage === i + 1 ? "default" : "outline"}
+                          key={number}
+                          variant={currentPage === number ? "default" : "outline"}
                           size="sm"
-                          onClick={() => paginate(i + 1)}
+                          onClick={() => paginate(number)}
                         >
-                          {i + 1}
+                          {number}
                         </Button>
                       ))}
                       <Button
@@ -760,287 +823,290 @@ export default function Page() {
                         onClick={() => paginate(currentPage + 1)}
                         disabled={currentPage === totalPages}
                       >
-                        Selanjutnya
+                        Next
                       </Button>
-                    </div>
+                    </nav>
                   </div>
                 )}
-              </CardFooter>
+              </CardContent>
             </Card>
           </div>
         </main>
       </SidebarInset>
 
-      {/* Detail Modal */}
+      {/* Reservasi Detail Modal */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-[500px]">
+        <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>Detail Reservasi</DialogTitle>
             <DialogDescription>
-              Lihat detail data reservasi fasilitas
+              Informasi lengkap data reservasi
             </DialogDescription>
           </DialogHeader>
           {detailItem && (
-            <div className="space-y-4 pt-4">
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">ID Reservasi</p>
-                  <p className="text-sm">{detailItem.id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">ID Acara</p>
-                  <p className="text-sm">{detailItem.acara_id}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Nama Acara</p>
-                  <p className="text-sm">{getAcaraName(detailItem.acara_id)}</p>
-                </div>
+            <div className="space-y-4 py-2">
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">ID Reservasi</div>
+                <div className="col-span-2">{detailItem.id}</div>
               </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">ID Fasilitas</p>
-                  <p className="text-sm">{detailItem.fasilitas_id}</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Acara</div>
+                <div className="col-span-2">{getAcaraName(detailItem.acara_id)}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Fasilitas</div>
+                <div className="col-span-2">{getFasilitasName(detailItem.fasilitas_id)}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Penyewa</div>
+                <div className="col-span-2">{getUserName(detailItem.user_id)}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Tanggal Reservasi</div>
+                <div className="col-span-2">{detailItem.tgl_reservasi}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Jam Mulai</div>
+                <div className="col-span-2">{formatTimeDisplay(detailItem.jam_mulai)}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Jam Selesai</div>
+                <div className="col-span-2">{formatTimeDisplay(detailItem.jam_selesai)}</div>
+              </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Harga</div>
                 <div className="col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Nama Fasilitas</p>
-                  <p className="text-sm">{getFasilitasName(detailItem.fasilitas_id)}</p>
+                  {formatPrice(detailItem.harga || getFasilitasPrice(detailItem.fasilitas_id))}
                 </div>
               </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">ID Penyewa</p>
-                  <p className="text-sm">{detailItem.user_id}</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Status Pembayaran</div>
                 <div className="col-span-2">
-                  <p className="text-sm font-medium text-gray-500">Nama Penyewa</p>
-                  <p className="text-sm">{getUserName(detailItem.user_id)}</p>
+                  <span
+                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                      detailItem.status_pembayaran === "paid"
+                        ? "bg-green-100 text-green-700"
+                        : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {detailItem.status_pembayaran}
+                  </span>
                 </div>
               </div>
-
-              <div className="grid grid-cols-3 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Tanggal Reservasi</p>
-                  <p className="text-sm">{detailItem.tgl_reservasi}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Jam Mulai</p>
-                  <p className="text-sm">{formatTimeDisplay(detailItem.jam_mulai)}</p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Jam Selesai</p>
-                  <p className="text-sm">{formatTimeDisplay(detailItem.jam_selesai)}</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Dibuat Pada</div>
+                <div className="col-span-2">{detailItem.created_at || "-"}</div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Status Pembayaran</p>
-                  <p className="text-sm">
-                    <span
-                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                        detailItem.status_pembayaran === "paid"
-                          ? "bg-green-100 text-green-700"
-                          : "bg-yellow-100 text-yellow-700"
-                      }`}
-                    >
-                      {detailItem.status_pembayaran}
-                    </span>
-                  </p>
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-gray-500">Harga</p>
-                  <p className="text-sm">{formatPrice(detailItem.harga || getFasilitasPrice(detailItem.fasilitas_id))}</p>
-                </div>
+              <div className="grid grid-cols-3 gap-2 text-sm">
+                <div className="font-medium">Diperbarui Pada</div>
+                <div className="col-span-2">{detailItem.updated_at || "-"}</div>
               </div>
             </div>
           )}
           <DialogFooter>
-            <Button onClick={() => setIsDetailModalOpen(false)}>Tutup</Button>
+            <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
+              Tutup
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
 
-{/* Add/Edit Modal */}
-      <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-        <DialogContent className="sm:max-w-[600px]">
-          <DialogHeader>
-            <DialogTitle>{isEditing ? "Edit Reservasi" : "Tambah Reservasi Baru"}</DialogTitle>
-            <DialogDescription>
-              {isEditing 
-                ? "Perbarui data reservasi fasilitas yang sudah ada"
-                : "Tambahkan data reservasi fasilitas baru"
-              }
-            </DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-4 py-4">
-            <div className="grid grid-cols-2 gap-4">
-              {/* Acara dropdown */}
-              <div className="space-y-2">
-                <Label htmlFor="acara_id">Acara</Label>
-                <Select 
-                  value={formData.acara_id?.toString() || ""} 
-                  onValueChange={(value) => handleInputChange({ target: { name: "acara_id", value } })}
-                >
-                  <SelectTrigger id="acara_id">
-                    <SelectValue placeholder="Pilih acara" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {acara.map((item) => (
-                      <SelectItem key={item.id} value={item.id.toString()}>
-                        {item.nama_acara}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {/* Fasilitas dropdown */}
-              <div className="space-y-2">
-                <Label htmlFor="fasilitas_id">Fasilitas</Label>
-                <Select 
-                  value={formData.fasilitas_id?.toString() || ""} 
-                  onValueChange={(value) => handleInputChange({ target: { name: "fasilitas_id", value } })}
-                >
-                  <SelectTrigger id="fasilitas_id">
-                    <SelectValue placeholder="Pilih fasilitas" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {fasilitas.map((item) => (
-                      <SelectItem key={item.id} value={item.id.toString()}>
-                        {item.nama_fasilitas} - {formatPrice(item.harga)}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Users dropdown */}
-            <div className="space-y-2">
-              <Label htmlFor="user_id">Penyewa</Label>
-              <Select 
-                value={formData.user_id?.toString() || ""} 
-                onValueChange={(value) => handleInputChange({ target: { name: "user_id", value } })}
-              >
-                <SelectTrigger id="user_id">
-                  <SelectValue placeholder="Pilih penyewa" />
-                </SelectTrigger>
-                <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id.toString()}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-
-            <div className="grid grid-cols-3 gap-4">
-              {/* Tanggal Reservasi */}
-              <div className="space-y-2">
-                <Label htmlFor="tgl_reservasi">Tanggal Reservasi</Label>
-                <Input
-                  id="tgl_reservasi"
-                  name="tgl_reservasi"
-                  type="date"
-                  value={formData.tgl_reservasi || ""}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              {/* Jam Mulai */}
-              <div className="space-y-2">
-                <Label htmlFor="jam_mulai">Jam Mulai</Label>
-                <Input
-                  id="jam_mulai"
-                  name="jam_mulai"
-                  type="time"
-                  value={formData.jam_mulai || ""}
-                  onChange={handleInputChange}
-                />
-              </div>
-
-              {/* Jam Selesai */}
-              <div className="space-y-2">
-                <Label htmlFor="jam_selesai">Jam Selesai</Label>
-                <Input
-                  id="jam_selesai"
-                  name="jam_selesai"
-                  type="time"
-                  value={formData.jam_selesai || ""}
-                  onChange={handleInputChange}
-                />
-              </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
-              {/* Harga (read-only, set from facility) */}
-              <div className="space-y-2">
-                <Label htmlFor="harga">Harga (Rp)</Label>
-                <Input
-                  id="harga"
-                  name="harga"
-                  value={formData.harga || ""}
-                  disabled
-                />
-              </div>
-
-              {/* Status Pembayaran */}
-              <div className="space-y-2">
-                <Label htmlFor="status_pembayaran">Status Pembayaran</Label>
-                <Select 
-                  value={formData.status_pembayaran || ""}
-                  onValueChange={(value) => handleInputChange({ target: { name: "status_pembayaran", value } })}
-                >
-                  <SelectTrigger id="status_pembayaran">
-                    <SelectValue placeholder="Pilih status" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="unpaid">Belum Dibayar</SelectItem>
-                    <SelectItem value="paid">Sudah Dibayar</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
+      {/* Tambah/Edit Reservasi Modal */}
+<Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+    <DialogHeader>
+      <DialogTitle>{isEditing ? "Edit Reservasi" : "Tambah Reservasi"}</DialogTitle>
+      <DialogDescription>
+        {isEditing ? "Perbarui data reservasi" : "Tambahkan data reservasi baru"}
+      </DialogDescription>
+    </DialogHeader>
+    <div className="space-y-4 py-2">
+      {/* Validation Errors */}
+      {validationErrors.length > 0 && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4 mr-2" />
+          <AlertDescription>
+            <ul className="list-disc pl-5 space-y-1">
+              {validationErrors.map((error, index) => (
+                <li key={index}>{error}</li>
+              ))}
+            </ul>
+          </AlertDescription>
+        </Alert>
+      )}
+      
+      {/* Form Fields */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="acara_id">Acara</Label>
+          <Select
+            value={formData.acara_id ? formData.acara_id.toString() : ""}
+            onValueChange={(value) => handleInputChange({ target: { name: "acara_id", value } })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih acara">
+                {formData.acara_id && acara.find(item => item.id.toString() === formData.acara_id.toString())?.nama_acara}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {acara.map((item) => (
+                <SelectItem key={item.id} value={item.id.toString()}>
+                  {item.nama_acara}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="fasilitas_id">Fasilitas</Label>
+          <Select
+            value={formData.fasilitas_id ? formData.fasilitas_id.toString() : ""}
+            onValueChange={(value) => handleInputChange({ target: { name: "fasilitas_id", value } })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih fasilitas">
+                {formData.fasilitas_id && 
+                  fasilitas.find(item => item.id.toString() === formData.fasilitas_id.toString())?.nama_fasilitas + 
+                  " - " + 
+                  formatPrice(fasilitas.find(item => item.id.toString() === formData.fasilitas_id.toString())?.harga)}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {fasilitas.map((item) => (
+                <SelectItem key={item.id} value={item.id.toString()}>
+                  {item.nama_fasilitas} - {formatPrice(item.harga)}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="user_id">Penyewa</Label>
+          <Select
+            value={formData.user_id ? formData.user_id.toString() : ""}
+            onValueChange={(value) => handleInputChange({ target: { name: "user_id", value } })}
+          >
+            <SelectTrigger>
+              <SelectValue placeholder="Pilih penyewa">
+                {formData.user_id && users.find(item => item.id.toString() === formData.user_id.toString())?.name}
+              </SelectValue>
+            </SelectTrigger>
+            <SelectContent>
+              {users.map((item) => (
+                <SelectItem key={item.id} value={item.id.toString()}>
+                  {item.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="tgl_reservasi">Tanggal Reservasi</Label>
+          <Input
+            type="date"
+            id="tgl_reservasi"
+            name="tgl_reservasi"
+            value={formData.tgl_reservasi}
+            onChange={handleInputChange}
+          />
+        </div>
+        
+        <div className="grid grid-cols-2 gap-4">
+          <div className="space-y-2">
+            <Label htmlFor="jam_mulai">Jam Mulai</Label>
+            <Input
+              type="time"
+              id="jam_mulai"
+              name="jam_mulai"
+              value={formData.jam_mulai}
+              onChange={handleInputChange}
+            />
           </div>
-          <DialogFooter className="flex items-center justify-between w-full">
-            <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
-              Batal
-            </Button>
-            <Button onClick={handleFormSubmit} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  <span>Menyimpan...</span>
-                </>
-              ) : (
-                <span>{isEditing ? "Perbarui" : "Simpan"}</span>
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+          <div className="space-y-2">
+            <Label htmlFor="jam_selesai">Jam Selesai</Label>
+            <Input
+              type="time"
+              id="jam_selesai"
+              name="jam_selesai"
+              value={formData.jam_selesai}
+              onChange={handleInputChange}
+            />
+          </div>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="harga">Harga</Label>
+          <Input
+            type="text"
+            id="harga"
+            name="harga"
+            value={formData.harga}
+            onChange={handleInputChange}
+            disabled
+          />
+          <p className="text-sm text-gray-500">
+            Harga diatur otomatis berdasarkan fasilitas yang dipilih
+          </p>
+        </div>
+        
+        {isEditing && (
+          <div className="space-y-2">
+            <Label htmlFor="status_pembayaran">Status Pembayaran</Label>
+            <Select
+              value={formData.status_pembayaran || ""}
+              onValueChange={(value) => handleInputChange({ target: { name: "status_pembayaran", value } })}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Pilih status">
+                  {formData.status_pembayaran === "unpaid" && "Belum Dibayar"}
+                  {formData.status_pembayaran === "paid" && "Sudah Dibayar"}
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="unpaid">Belum Dibayar</SelectItem>
+                <SelectItem value="paid">Sudah Dibayar</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        )}
+      </div>
+    </div>
+    <DialogFooter>
+      <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+        Batal
+      </Button>
+      <Button onClick={handleFormSubmit} disabled={isLoading}>
+        {isLoading ? (
+          <>
+            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            <span>Menyimpan...</span>
+          </>
+        ) : (
+          <span>{isEditing ? "Simpan Perubahan" : "Simpan"}</span>
+        )}
+      </Button>
+    </DialogFooter>
+  </DialogContent>
+</Dialog>
 
       {/* Delete Confirmation Modal */}
       <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+            <AlertDialogTitle>Hapus Reservasi</AlertDialogTitle>
             <AlertDialogDescription>
               Apakah Anda yakin ingin menghapus data reservasi ini? Tindakan ini tidak dapat dibatalkan.
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => setIsDeleteModalOpen(false)}>Batal</AlertDialogCancel>
-            <AlertDialogAction 
-              onClick={handleDelete}
-              className="bg-red-500 hover:bg-red-600 text-white"
-            >
+            <AlertDialogCancel>Batal</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDelete} disabled={isLoading}>
               {isLoading ? (
                 <>
-                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
                   <span>Menghapus...</span>
                 </>
               ) : (

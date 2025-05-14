@@ -61,7 +61,7 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { toast } from "@/components/ui/use-toast"
+import { toast } from "react-hot-toast";
 
 export default function Page() {
   const API_BASE_URL = "http://127.0.0.1:8000/api/fasilitas"
@@ -84,7 +84,20 @@ export default function Page() {
   const [isEditing, setIsEditing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [isDuplicateName, setIsDuplicateName] = useState(false)
   const itemsPerPage = 5
+
+  // Reset form data function
+  const resetFormData = () => {
+    setFormData({
+      nama_fasilitas: "",
+      keterangan: "",
+      harga: "",
+      status: "",
+      touched: {}
+    });
+    setIsDuplicateName(false);
+  };
 
   // Fetch facilities data on component mount
   useEffect(() => {
@@ -100,6 +113,15 @@ export default function Page() {
     setFilteredData(filtered)
     setCurrentPage(1)
   }, [searchTerm, data])
+
+  // Check for duplicate facility name
+  const checkDuplicateName = (name, currentId = null) => {
+    return data.some(item => 
+      item.nama_fasilitas && 
+      item.nama_fasilitas.toLowerCase() === name.toLowerCase() && 
+      item.id !== currentId
+    );
+  };
 
   // Fetch all facilities from API
   const fetchFacilities = async () => {
@@ -118,19 +140,11 @@ export default function Page() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          toast({
-            title: "Sesi berakhir",
-            description: "Sesi login Anda telah berakhir. Silakan login kembali.",
-            variant: "destructive",
-          });
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
           return;
         }
 
-        toast({
-          title: "Error",
-          description: `Gagal memuat data: ${response.status}`,
-          variant: "destructive",
-        });
+        toast.error(`Gagal memuat data: ${response.status}`);
         return;
       }
 
@@ -164,19 +178,11 @@ export default function Page() {
         console.error("Invalid data format received:", result);
         setData([]);
         setFilteredData([]);
-        toast({
-          title: "Error",
-          description: "Format data tidak valid",
-          variant: "destructive",
-        });
+        toast.error("Format data tidak valid");
       }
     } catch (error) {
       console.error("Failed to fetch facilities:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data fasilitas",
-        variant: "destructive",
-      });
+      toast.error("Gagal memuat data fasilitas");
       setData([]);
       setFilteredData([]);
     } finally {
@@ -201,11 +207,7 @@ export default function Page() {
       
       if (!response.ok) {
         if (response.status === 401) {
-          toast({
-            title: "Sesi berakhir",
-            description: "Sesi login Anda telah berakhir. Silakan login kembali.",
-            variant: "destructive",
-          });
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
           return;
         }
         
@@ -222,138 +224,132 @@ export default function Page() {
         // Jika data langsung ada di root result
         setDetailItem(result);
       } else {
-        toast({
-          title: "Error",
-          description: "Format data detail tidak valid",
-          variant: "destructive",
-        });
+        toast.error("Format data detail tidak valid");
       }
       
       setIsDetailModalOpen(true);
     } catch (error) {
       console.error(`Failed to fetch facility details for ID ${id}:`, error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat detail fasilitas",
-        variant: "destructive",
-      });
+      toast.error("Gagal memuat detail fasilitas");
     } finally {
       setIsLoading(false);
     }
   };
 
   // Improve error handling in createFacility function
-const createFacility = async (facilityData) => {
-  setIsLoading(true)
-  try {
-    const token = localStorage.getItem("token");
-    
-    // Format data properly for API
-    const formattedData = {
-      nama_fasilitas: facilityData.nama_fasilitas,
-      keterangan: facilityData.keterangan || "",
-      harga: facilityData.harga || "0",
-      status: facilityData.status
-    };
-    
-    console.log("Sending data to create:", formattedData);
-    
-    const response = await fetch(`${API_BASE_URL}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify(formattedData),
-    });
-    
-    const responseData = await response.json().catch(() => ({}));
-    console.log("API Response:", responseData);
-    
-    if (!response.ok) {
-      // Extract error message from response if available
-      const errorMessage = responseData.message || 
-                          responseData.error || 
-                          `Error ${response.status}: ${response.statusText}`;
-      throw new Error(errorMessage);
+  const createFacility = async (facilityData) => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Check for duplicate facility name
+      if (checkDuplicateName(facilityData.nama_fasilitas)) {
+        setIsDuplicateName(true);
+        toast.error("Nama fasilitas sudah ada. Gunakan nama yang berbeda.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Format data properly for API
+      const formattedData = {
+        nama_fasilitas: facilityData.nama_fasilitas,
+        keterangan: facilityData.keterangan || "",
+        harga: facilityData.harga || "0",
+        status: facilityData.status
+      };
+      
+      console.log("Sending data to create:", formattedData);
+      
+      const response = await fetch(`${API_BASE_URL}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedData),
+      });
+      
+      const responseData = await response.json().catch(() => ({}));
+      console.log("API Response:", responseData);
+      
+      if (!response.ok) {
+        // Extract error message from response if available
+        const errorMessage = responseData.message || 
+                            responseData.error || 
+                            `Error ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+      
+      await fetchFacilities(); // Refresh data
+      toast.success("Data fasilitas berhasil ditambahkan");
+    } catch (error) {
+      console.error("Failed to create facility:", error);
+      toast.error(`Gagal menambahkan fasilitas: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-    
-    await fetchFacilities() // Refresh data
-    toast({
-      title: "Berhasil",
-      description: "Fasilitas baru berhasil ditambahkan",
-    })
-  } catch (error) {
-    console.error("Failed to create facility:", error)
-    toast({
-      title: "Error",
-      description: `Gagal menambahkan fasilitas: ${error.message}`,
-      variant: "destructive",
-    })
-  } finally {
-    setIsLoading(false)
   }
-}
 
-// Similarly update updateFacility function with better error handling
-const updateFacility = async (id, facilityData) => {
-  setIsLoading(true)
-  try {
-    const token = localStorage.getItem("token");
-    
-    // Clean and format the data to match API expectations
-    const formattedData = {
-      nama_fasilitas: facilityData.nama_fasilitas,
-      keterangan: facilityData.keterangan || "",
-      harga: facilityData.harga || "0",
-      status: facilityData.status
-    };
-    
-    console.log("Updating facility with ID:", id);
-    console.log("Sending data:", formattedData);
-    
-    const response = await fetch(`${API_BASE_URL}/${id}`, {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify(formattedData),
-    });
-    
-    const responseData = await response.json().catch(() => ({}));
-    console.log("API Response:", responseData);
-    
-    if (!response.ok) {
-      // Extract error message from response if available
-      const errorMessage = responseData.message || 
-                          responseData.error || 
-                          `Error ${response.status}: ${response.statusText}`;
-      throw new Error(errorMessage);
+  // Similarly update updateFacility function with better error handling
+  const updateFacility = async (id, facilityData) => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      
+      // Check for duplicate facility name, excluding the current item
+      if (checkDuplicateName(facilityData.nama_fasilitas, id)) {
+        setIsDuplicateName(true);
+        toast.error("Nama fasilitas sudah ada. Gunakan nama yang berbeda.");
+        setIsLoading(false);
+        return;
+      }
+      
+      // Clean and format the data to match API expectations
+      const formattedData = {
+        nama_fasilitas: facilityData.nama_fasilitas,
+        keterangan: facilityData.keterangan || "",
+        harga: facilityData.harga || "0",
+        status: facilityData.status
+      };
+      
+      console.log("Updating facility with ID:", id);
+      console.log("Sending data:", formattedData);
+      
+      const response = await fetch(`${API_BASE_URL}/${id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify(formattedData),
+      });
+      
+      const responseData = await response.json().catch(() => ({}));
+      console.log("API Response:", responseData);
+      
+      if (!response.ok) {
+        // Extract error message from response if available
+        const errorMessage = responseData.message || 
+                            responseData.error || 
+                            `Error ${response.status}: ${response.statusText}`;
+        throw new Error(errorMessage);
+      }
+      
+      await fetchFacilities(); // Refresh data
+      toast.success("Data fasilitas berhasil diperbarui");
+    } catch (error) {
+      console.error(`Failed to update facility ID ${id}:`, error);
+      toast.error(`Gagal memperbarui fasilitas: ${error.message}`);
+    } finally {
+      setIsLoading(false);
     }
-    
-    await fetchFacilities() // Refresh data
-    toast({
-      title: "Berhasil",
-      description: "Fasilitas berhasil diperbarui",
-    })
-  } catch (error) {
-    console.error(`Failed to update facility ID ${id}:`, error)
-    toast({
-      title: "Error",
-      description: `Gagal memperbarui fasilitas: ${error.message}`,
-      variant: "destructive",
-    })
-  } finally {
-    setIsLoading(false)
   }
-}
 
   // Delete facility
   const deleteFacility = async (id) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
       
@@ -364,24 +360,19 @@ const updateFacility = async (id, facilityData) => {
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-      })
+      });
       
       if (!response.ok) {
-        throw new Error(`Error: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        const errorMessage = errorData.message || `Error: ${response.status}`;
+        throw new Error(errorMessage);
       }
       
       await fetchFacilities(); // Refresh data
-      toast({
-        title: "Berhasil",
-        description: "Fasilitas berhasil dihapus",
-      });
+      toast.success("Data fasilitas berhasil dihapus");
     } catch (error) {
       console.error(`Failed to delete facility ID ${id}:`, error);
-      toast({
-        title: "Error",
-        description: "Gagal menghapus fasilitas",
-        variant: "destructive",
-      });
+      toast.error(`Gagal menghapus fasilitas: ${error.message}`);
     } finally {
       setIsLoading(false);
     }
@@ -389,21 +380,24 @@ const updateFacility = async (id, facilityData) => {
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    // Add console log to debug changes
-    if (name === "status" || name === "harga") {
-      console.log(`${name} changed to:`, value);
+    
+    // Reset duplicate name error when changing name field
+    if (name === "nama_fasilitas") {
+      setIsDuplicateName(false);
     }
-    setFormData({ ...formData, [name]: value });
+    
+    // For price field, ensure proper decimal formatting
+    if (name === "harga") {
+      // Allow empty string or valid number with up to 2 decimal places
+      const formattedValue = value === "" ? "" : parseFloat(value).toString();
+      setFormData({ ...formData, harga: formattedValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   }
 
   const handleAddNew = () => {
-    setFormData({ 
-      nama_fasilitas: "", 
-      keterangan: "", 
-      harga: "", 
-      status: "",
-      touched: {} 
-    });
+    resetFormData();
     setIsEditing(false);
     setIsAddModalOpen(true);
   }
@@ -422,6 +416,7 @@ const updateFacility = async (id, facilityData) => {
     });
     
     setIsEditing(true);
+    setIsDuplicateName(false);
     setIsAddModalOpen(true);
   }
 
@@ -446,11 +441,18 @@ const updateFacility = async (id, facilityData) => {
         }
       }));
       
-      toast({
-        title: "Error",
-        description: "Nama fasilitas dan status harus diisi",
-        variant: "destructive",
-      });
+      toast.error("Nama fasilitas dan status harus diisi");
+      return;
+    }
+    
+    // Check for duplicate name
+    const isDuplicate = isEditing 
+      ? checkDuplicateName(formData.nama_fasilitas, formData.id)
+      : checkDuplicateName(formData.nama_fasilitas);
+    
+    if (isDuplicate) {
+      setIsDuplicateName(true);
+      toast.error("Nama fasilitas sudah ada. Gunakan nama yang berbeda.");
       return;
     }
     
@@ -775,20 +777,17 @@ const updateFacility = async (id, facilityData) => {
                         onChange={handleInputChange}
                         placeholder="Masukkan nama fasilitas"
                         disabled={isLoading}
-                        className={formData.touched?.nama_fasilitas && !formData.nama_fasilitas ? "border-red-500" : ""}
-                        onBlur={() => {
-                          setFormData(prev => ({
-                            ...prev,
-                            touched: {
-                              ...prev.touched,
-                              nama_fasilitas: true
-                            }
-                          }))
-                        }}
-                        autoFocus
+                        className={
+                          (formData.touched?.nama_fasilitas && !formData.nama_fasilitas) || isDuplicateName 
+                            ? "border-red-500 focus:ring-red-500" 
+                            : ""
+                        }
                       />
+                      {isDuplicateName && (
+                        <p className="text-xs text-red-500 mt-1">Nama fasilitas sudah digunakan.</p>
+                      )}
                       {formData.touched?.nama_fasilitas && !formData.nama_fasilitas && (
-                        <p className="text-sm text-red-500 mt-1">Nama fasilitas harus diisi</p>
+                        <p className="text-xs text-red-500 mt-1">Nama fasilitas harus diisi.</p>
                       )}
                     </div>
                     <div className="grid gap-2">
@@ -798,25 +797,26 @@ const updateFacility = async (id, facilityData) => {
                         name="keterangan"
                         value={formData.keterangan}
                         onChange={handleInputChange}
-                        placeholder="Masukkan keterangan fasilitas"
-                        disabled={isLoading}
+                        placeholder="Tambahkan keterangan fasilitas (opsional)"
                         rows={3}
+                        disabled={isLoading}
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="harga">Harga (Rp)</Label>
+                      <Label htmlFor="harga">Harga</Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500">Rp</span>
+                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
+                          <span className="text-gray-500">Rp</span>
+                        </div>
                         <Input
                           id="harga"
                           name="harga"
                           type="number"
-                          min="0"
                           value={formData.harga}
                           onChange={handleInputChange}
                           placeholder="0"
+                          className="pl-9"
                           disabled={isLoading}
-                          className="pl-8"
                         />
                       </div>
                     </div>
@@ -825,28 +825,19 @@ const updateFacility = async (id, facilityData) => {
                         Status <span className="text-red-500">*</span>
                       </Label>
                       <Select
-                        name="status"
                         value={formData.status}
-                        onValueChange={(value) => {
-                          handleInputChange({
-                            target: { name: "status", value }
-                          });
-                        }}
+                        onValueChange={(value) => setFormData({ ...formData, status: value, touched: { ...formData.touched, status: true } })}
                         disabled={isLoading}
                       >
                         <SelectTrigger 
-                          className={formData.touched?.status && !formData.status ? "border-red-500" : ""}
-                          onBlur={() => {
-                            setFormData(prev => ({
-                              ...prev,
-                              touched: {
-                                ...prev.touched,
-                                status: true
-                              }
-                            }))
-                          }}
+                          id="status" 
+                          className={
+                            formData.touched?.status && !formData.status 
+                              ? "border-red-500 focus:ring-red-500" 
+                              : ""
+                          }
                         >
-                          <SelectValue placeholder="Pilih status" />
+                          <SelectValue placeholder="Pilih status fasilitas" />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="tersedia">Tersedia</SelectItem>
@@ -854,67 +845,51 @@ const updateFacility = async (id, facilityData) => {
                         </SelectContent>
                       </Select>
                       {formData.touched?.status && !formData.status && (
-                        <p className="text-sm text-red-500 mt-1">Status harus dipilih</p>
+                        <p className="text-xs text-red-500 mt-1">Status harus dipilih.</p>
                       )}
                     </div>
                   </div>
                   <DialogFooter>
                     <Button 
-                      type="button" 
                       variant="outline" 
-                      onClick={() => setIsAddModalOpen(false)} 
+                      type="button" 
+                      onClick={() => setIsAddModalOpen(false)}
                       disabled={isLoading}
                     >
                       Batal
                     </Button>
                     <Button 
-                      type="submit" 
-                      disabled={isLoading || !formData.nama_fasilitas || !formData.status}
+                      type="submit"
+                      disabled={isLoading || isDuplicateName}
+                      className="gap-1"
                     >
-                      {isLoading ? (
-                        <>
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                          {isEditing ? "Menyimpan..." : "Menambahkan..."}
-                        </>
-                      ) : (
-                        isEditing ? "Simpan Perubahan" : "Tambah Fasilitas"
-                      )}
+                      {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                      {isEditing ? "Perbarui" : "Simpan"}
                     </Button>
                   </DialogFooter>
                 </form>
               </DialogContent>
             </Dialog>
 
-            {/* Delete Confirmation Modal */}
-            <AlertDialog open={isDeleteModalOpen} onOpenChange={(open) => {
-              if (!isLoading) {
-                setIsDeleteModalOpen(open);
-              }
-            }}>
+            {/* Delete Confirmation Dialog */}
+            <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
               <AlertDialogContent>
                 <AlertDialogHeader>
-                  <AlertDialogTitle>Konfirmasi Penghapusan</AlertDialogTitle>
+                  <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Anda akan menghapus fasilitas <span className="font-semibold">{selectedItem?.nama_fasilitas}</span>.
-                    <br />
-                    Tindakan ini tidak dapat dibatalkan dan akan menghapus fasilitas secara permanen dari database.
+                    Apakah Anda yakin ingin menghapus fasilitas <span className="font-medium">{selectedItem?.nama_fasilitas}</span>? 
+                    Tindakan ini tidak dapat dibatalkan.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel disabled={isLoading}>Batal</AlertDialogCancel>
-                  <AlertDialogAction 
-                    onClick={handleDelete} 
-                    className="bg-red-500 hover:bg-red-600 text-white focus:ring-red-500"
+                  <AlertDialogAction
+                    onClick={handleDelete}
                     disabled={isLoading}
+                    className="bg-red-600 hover:bg-red-700 focus:ring-red-600 gap-1"
                   >
-                    {isLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Menghapus...
-                      </>
-                    ) : (
-                      "Hapus"
-                    )}
+                    {isLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+                    Hapus
                   </AlertDialogAction>
                 </AlertDialogFooter>
               </AlertDialogContent>

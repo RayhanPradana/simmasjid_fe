@@ -1,7 +1,6 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { toast } from "@/components/ui/use-toast"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -52,6 +51,8 @@ import {
     CardHeader, 
     CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
+import toast from "react-hot-toast";
+
 
 export default function Page() {
   const API_BASE_URL = "http://127.0.0.1:8000/api/acara"
@@ -165,7 +166,7 @@ export default function Page() {
       
       const result = await response.json()
       if (result && result.status === "success") {
-        toast({ title: "Berhasil", description: "Acara berhasil ditambahkan" })
+        toast.success("Data Acara berhasil ditambahkan");
       }
     } catch (error) {
       console.error("Gagal menambahkan acara:", error)
@@ -191,7 +192,7 @@ export default function Page() {
       
       const result = await response.json()
       if (result && result.status === "success") {
-        toast({ title: "Berhasil", description: "Acara berhasil diperbarui" })
+        toast.success("Data Acara berhasil diperbarui");
       }
     } catch (error) {
       console.error("Gagal memperbarui acara:", error)
@@ -216,7 +217,7 @@ export default function Page() {
       
       const result = await response.json()
       if (result && result.status === "success") {
-        toast({ title: "Berhasil", description: "Acara berhasil dihapus" })
+        toast.success("Data Acara berhasil dihapus");
       }
     } catch (error) {
       console.error("Gagal menghapus acara:", error)
@@ -226,27 +227,50 @@ export default function Page() {
     }
   }
 
+  // Modifikasi handleInputChange untuk langsung mengecek duplikasi saat input berubah
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
-  }
+    const { name, value } = e.target;
+    
+    setFormData(prev => ({
+      ...prev,
+      [name]: value,
+      touched: {
+        ...prev.touched,
+        [name]: true
+      }
+    }));
+    
+    if (name === 'nama_acara') {
+      checkDuplicateName(value);
+    }
+  };
 
+  // Fixed form initialization to include touched property
   const handleAddNew = () => {
-    setFormData({ nama_acara: "", deskripsi: "", tanggal: "" })
-    setIsEditing(false)
-    setIsAddModalOpen(true)
-  }
+    setFormData({ 
+      nama_acara: "", 
+      deskripsi: "", 
+      tanggal: "",
+      touched: {},
+      namaDuplicate: false
+    });
+    setIsEditing(false);
+    setIsAddModalOpen(true);
+  };
 
+  // Fixed handleEdit to include touched property and reset namaDuplicate
   const handleEdit = (item) => {
     setFormData({
       id: item.id,
       nama_acara: item.nama_acara || "",
       deskripsi: item.deskripsi || "",
       tanggal: item.tanggal || "",
-    })
-    setIsEditing(true)
-    setIsAddModalOpen(true)
-  }
+      touched: {},
+      namaDuplicate: false
+    });
+    setIsEditing(true);
+    setIsAddModalOpen(true);
+  };
 
   const handleFormSubmit = () => {
     if (!formData.nama_acara) {
@@ -277,6 +301,35 @@ export default function Page() {
     setDetailItem(item)
     setIsDetailModalOpen(true)
   }
+
+  // Fixed checkDuplicateName function
+  const checkDuplicateName = (nama) => {
+    // If editing, ignore the current item's name to avoid false duplicate detection
+    if (isEditing && formData.id) {
+      const isDuplicate = data.some(event => 
+        event.id !== formData.id && 
+        event.nama_acara && 
+        event.nama_acara.toLowerCase() === nama.toLowerCase()
+      );
+      
+      setFormData(prev => ({
+        ...prev,
+        namaDuplicate: isDuplicate
+      }));
+      return;
+    }
+    
+    // Check against all existing events
+    const isDuplicate = data.some(event => 
+      event.nama_acara && 
+      event.nama_acara.toLowerCase() === nama.toLowerCase()
+    );
+    
+    setFormData(prev => ({
+      ...prev,
+      namaDuplicate: isDuplicate
+    }));
+  };
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
@@ -421,19 +474,30 @@ export default function Page() {
                         value={formData.nama_acara}
                         onChange={handleInputChange}
                         placeholder="Isi nama acara di sini..."
-                        className={formData.nama_acara === "" && formData.touched?.nama_acara ? "border-red-500" : ""}
+                        className={
+                            (formData.nama_acara === "" && formData.touched?.nama_acara) || 
+                            formData.namaDuplicate ? 
+                            "border-red-500" : ""
+                        }
                         onBlur={() => {
+                            // Validasi ketika field kehilangan fokus
                             setFormData(prev => ({
                                 ...prev,
                                 touched: {
                                     ...prev.touched,
                                     nama_acara: true
                                 }
-                            }))
+                            }));
+                            
+                            // Cek duplikasi nama
+                            checkDuplicateName(formData.nama_acara);
                         }}
                         />
                         {formData.nama_acara === "" && formData.touched?.nama_acara && (
                             <p className="text-sm text-red-500 mt-1">Nama acara harus diisi</p>
+                        )}
+                        {formData.namaDuplicate && (
+                            <p className="text-sm text-red-500 mt-1">Nama acara sudah digunakan. Harap gunakan nama lain.</p>
                         )}
                     </div>
                     <div className="grid gap-2">
@@ -451,7 +515,7 @@ export default function Page() {
                     <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Batal</Button>
                     <Button 
                         onClick={handleFormSubmit} 
-                        disabled={isLoading || formData.nama_acara === ""}
+                        disabled={isLoading || formData.nama_acara === "" || formData.namaDuplicate}
                     >
                         {isLoading ? "Menyimpan..." : isEditing ? "Update" : "Tambah"}
                     </Button>
