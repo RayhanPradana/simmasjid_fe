@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,14 +8,14 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   CalendarCheck2,
   CreditCard,
@@ -29,179 +29,258 @@ import {
   Edit,
   Trash2,
   ChevronDown,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+} from "lucide-react";
+
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import toast from "react-hot-toast";
 
 export default function Page() {
   // Sample data untuk kegiatan
-  const initialData = [
-    { 
-      id: 1, 
-      namaKegiatan: "Rapat Anggaran Tahunan", 
-      hari: "Senin", 
-      waktu: "09:00-11:00", 
-      tempat: "Ruang Rapat A", 
-      penanggungJawab: "Ahmad Fauzi", 
-      keterangan: "Rapat pembahasan anggaran tahunan divisi keuangan" 
-    },
-    { 
-      id: 2, 
-      namaKegiatan: "Workshop Laporan Keuangan", 
-      hari: "Selasa", 
-      waktu: "13:00-16:00", 
-      tempat: "Aula Utama", 
-      penanggungJawab: "Dewi Lestari", 
-      keterangan: "Workshop penyusunan laporan keuangan tahunan" 
-    },
-    { 
-      id: 3, 
-      namaKegiatan: "Audit Internal", 
-      hari: "Rabu", 
-      waktu: "10:00-12:00", 
-      tempat: "Ruang Audit", 
-      penanggungJawab: "Budi Santoso", 
-      keterangan: "Audit internal divisi keuangan triwulan II" 
-    },
-    { 
-      id: 4, 
-      namaKegiatan: "Sosialisasi Anggaran 2025", 
-      hari: "Kamis", 
-      waktu: "09:30-11:30", 
-      tempat: "Ruang Meeting B", 
-      penanggungJawab: "Siti Aminah", 
-      keterangan: "Sosialisasi anggaran tahun 2025 untuk seluruh divisi" 
-    },
-    { 
-      id: 5, 
-      namaKegiatan: "Evaluasi Kinerja Keuangan", 
-      hari: "Jumat", 
-      waktu: "14:00-16:00", 
-      tempat: "Ruang Diskusi", 
-      penanggungJawab: "Eko Prasetyo", 
-      keterangan: "Evaluasi kinerja keuangan bulanan" 
-    },
-  ]
-
-  const [data, setData] = useState(initialData)
-  const [filteredData, setFilteredData] = useState(initialData)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [selectedItem, setSelectedItem] = useState(null)
+  const [data, setData] = useState([]);
+  const [error, setError] = useState({});
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  
   const [formData, setFormData] = useState({
-    namaKegiatan: "",
+    nama_kegiatan: "",
     hari: "",
     waktu: "",
     tempat: "",
-    penanggungJawab: "",
-    keterangan: ""
-  })
-  const [isEditing, setIsEditing] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
+    penanggung_jawab: "",
+    keterangan: "",
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   // Handle search
   useEffect(() => {
-    const filtered = data.filter(item => 
-      item.namaKegiatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.hari.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.penanggungJawab.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tempat.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    setFilteredData(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, data])
+    const filtered = data.filter(
+      (item) =>
+        item.nama_kegiatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.hari.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.penanggung_jawab
+          .toLowerCase()
+          .includes(searchTerm.toLowerCase()) ||
+        item.tempat.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredData(filtered);
+    setCurrentPage(1);
+  }, [searchTerm, data]);
 
   // Handle form input change
   const handleInputChange = (e) => {
-    const { name, value } = e.target
+    const { id, value } = e.target;
     setFormData({
       ...formData,
-      [name]: value
-    })
-  }
+      [id]: value,
+    });
+  };
 
   // Open add modal
   const handleAddNew = () => {
     setFormData({
-      namaKegiatan: "",
+      nama_kegiatan: "",
       hari: "",
       waktu: "",
       tempat: "",
-      penanggungJawab: "",
-      keterangan: ""
-    })
-    setIsEditing(false)
-    setIsAddModalOpen(true)
-  }
+      penanggung_jawab: "",
+      keterangan: "",
+    });
+    setIsEditing(false);
+    setIsAddModalOpen(true);
+  };
 
   // Open edit modal
   const handleEdit = (item) => {
     setFormData({
       id: item.id,
-      namaKegiatan: item.namaKegiatan,
-      hari: item.hari,
-      waktu: item.waktu,
-      tempat: item.tempat,
-      penanggungJawab: item.penanggungJawab,
-      keterangan: item.keterangan
-    })
-    setIsEditing(true)
-    setIsAddModalOpen(true)
-  }
+      nama_kegiatan: item.nama_kegiatan || "",
+      hari: item.hari || "",
+      waktu: item.waktu || "",
+      tempat: item.tempat || "",
+      penanggung_jawab: item.penanggung_jawab || "",
+      keterangan: item.keterangan || "",
+    });
+    setIsEditing(true);
+    setIsAddModalOpen(true);
+  };
 
   // Open delete modal
   const handleDeleteClick = (item) => {
-    setSelectedItem(item)
-    setIsDeleteModalOpen(true)
-  }
+    setSelectedItem(item);
+    setIsDeleteModalOpen(true);
+  };
 
   // Handle detail view
   const handleDetails = (item) => {
     // Implementasi view detail bisa ditambahkan di sini
-    console.log("View details for:", item)
-  }
+    console.log("View details for:", item);
+  };
 
   // Handle form submit
-  const handleFormSubmit = () => {
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+
+    const token = localStorage.getItem("token");
+    const form = new FormData();
+    form.append("nama_kegiatan", formData.nama_kegiatan);
+    form.append("hari", formData.hari);
+    form.append("waktu", formData.waktu);
+    form.append("tempat", formData.tempat);
+    form.append("penanggung_jawab", formData.penanggung_jawab);
+    form.append("keterangan", formData.keterangan);
+
     if (isEditing) {
-      // Update existing item
-      const updatedData = data.map(item => 
-        item.id === formData.id ? { ...formData } : item
-      )
-      setData(updatedData)
-    } else {
-      // Add new item
-      const newItem = {
-        id: data.length > 0 ? Math.max(...data.map(item => item.id)) + 1 : 1,
-        ...formData
-      }
-      setData([...data, newItem])
+      form.append("_method", "PUT");
     }
-    setIsAddModalOpen(false)
-  }
+
+    try {
+      const url = isEditing
+        ? `http://localhost:8000/api/jadwal/${formData.id}`
+        : "http://localhost:8000/api/jadwal";
+
+      const method = isEditing ? "POST" : "POST";
+
+      const res = await fetch(url, {
+        method: method,
+        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+
+      const dataRes = await res.json();
+
+      if (res.ok) {
+        alert(
+          isEditing ? "Berhasil mengupdate data!" : "Berhasil menambahkan data!"
+        );
+        setIsAddModalOpen(false);
+        setFormData({
+          nama_kegiatan: "",
+          hari: "",
+          waktu: "",
+          tempat: "",
+          penanggung_jawab: "",
+          keterangan: "",
+        });
+        // refresh data
+        const updated = await fetch("http://localhost:8000/api/jadwal", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const result = await updated.json();
+        setData(result.data || result);
+        setFilteredData(result.data || result);
+      } else if (dataRes.errors) {
+        setError(dataRes.errors);
+      } else {
+        setError({ general: [dataRes.message || "Gagal."] });
+      }
+    } catch (error) {
+      console.error(error);
+      alert("Gagal terhubung ke server.");
+    }
+  };
 
   // Handle delete
-  const handleDelete = () => {
-    const updatedData = data.filter(item => item.id !== selectedItem.id)
-    setData(updatedData)
-    setIsDeleteModalOpen(false)
-  }
+  const handleDelete = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/jadwal/${selectedItem.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const dataRes = await res.json();
+
+      if (res.ok) {
+        // Hapus data dari state jika berhasil menghapus di server
+        setData(data.filter((d) => d.id !== selectedItem.id));
+        alert("Data berhasil dihapus!");
+      } else {
+        alert("Gagal menghapus data: " + (dataRes.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      alert("Gagal terhubung ke server.");
+    }
+
+    setIsDeleteModalOpen(false); // Tutup modal setelah proses selesai
+  };
 
   // Pagination
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber)
-
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://127.0.0.1:8000/api/jadwal", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const result = await response.json();
+        setData(result.data || result);
+        setFilteredData(result.data || result);
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
+      }
+    };
+    fetchData();
+  }, []);
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -218,7 +297,7 @@ export default function Page() {
                 </BreadcrumbItem>
                 <BreadcrumbSeparator className="hidden md:block" />
                 <BreadcrumbItem>
-                  <BreadcrumbPage>Keuangan</BreadcrumbPage>
+                  <BreadcrumbPage>Jadwal Kegiatan</BreadcrumbPage>
                 </BreadcrumbItem>
               </BreadcrumbList>
             </Breadcrumb>
@@ -235,7 +314,11 @@ export default function Page() {
                     <CardTitle>Kegiatan</CardTitle>
                     <CardDescription>Kelola data kegiatan</CardDescription>
                   </div>
-                  <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
+                  <Button
+                    onClick={handleAddNew}
+                    size="sm"
+                    className="flex items-center gap-1"
+                  >
                     <Plus className="h-4 w-4" /> Tambah data
                   </Button>
                 </div>
@@ -243,15 +326,15 @@ export default function Page() {
               <CardContent>
                 {/* Pencarian */}
                 <div className="flex items-center mb-4">
-                    <div className="relative flex-1">
+                  <div className="relative flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
-                        placeholder="Cari jadwal kegiatan..."
-                        className="pl-10 w-full"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                      placeholder="Cari jadwal kegiatan..."
+                      className="pl-10 w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
                     />
-                    </div>
+                  </div>
                 </div>
 
                 {/* Tabel Data */}
@@ -260,14 +343,54 @@ export default function Page() {
                     {/* Header Tabel */}
                     <thead>
                       <tr className="bg-gray-50">
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12">ID</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56">Nama Kegiatan</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Hari</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36">Waktu</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Tempat</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40">Penanggung Jawab</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Keterangan</th>
-                        <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28">Aksi</th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"
+                        >
+                          ID
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56"
+                        >
+                          Nama Kegiatan
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
+                        >
+                          Hari
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-36"
+                        >
+                          Waktu
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40"
+                        >
+                          Tempat
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-40"
+                        >
+                          Penanggung Jawab
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Keterangan
+                        </th>
+                        <th
+                          scope="col"
+                          className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
+                        >
+                          Aksi
+                        </th>
                       </tr>
                     </thead>
                     {/* Body Tabel */}
@@ -275,13 +398,27 @@ export default function Page() {
                       {currentItems.length > 0 ? (
                         currentItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.id}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{item.namaKegiatan}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.hari}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.waktu}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{item.tempat}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{item.penanggungJawab}</td>
-                            <td className="px-4 py-3 text-sm text-gray-900">{item.keterangan}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {item.id}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {item.nama_kegiatan}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {item.hari}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              {item.waktu}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {item.tempat}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {item.penanggung_jawab}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              {item.keterangan}
+                            </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end gap-2">
                                 <Button
@@ -314,7 +451,10 @@ export default function Page() {
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="8" className="px-4 py-6 text-center text-sm text-gray-500">
+                          <td
+                            colSpan="8"
+                            className="px-4 py-6 text-center text-sm text-gray-500"
+                          >
                             Tidak ada data kegiatan
                           </td>
                         </tr>
@@ -322,14 +462,16 @@ export default function Page() {
                     </tbody>
                   </table>
                 </div>
-                </CardContent>
+              </CardContent>
               <CardFooter>
                 {totalPages > 1 && (
                   <div className="flex items-center justify-center w-full gap-1 mt-2">
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => paginate(currentPage > 1 ? currentPage - 1 : 1)}
+                      onClick={() =>
+                        paginate(currentPage > 1 ? currentPage - 1 : 1)
+                      }
                       disabled={currentPage === 1}
                     >
                       Previous
@@ -348,7 +490,13 @@ export default function Page() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => paginate(currentPage < totalPages ? currentPage + 1 : totalPages)}
+                      onClick={() =>
+                        paginate(
+                          currentPage < totalPages
+                            ? currentPage + 1
+                            : totalPages
+                        )
+                      }
                       disabled={currentPage === totalPages}
                     >
                       Next
@@ -362,21 +510,33 @@ export default function Page() {
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>{isEditing ? "Edit Kegiatan" : "Tambah Kegiatan Baru"}</DialogTitle>
+                  <DialogTitle>
+                    {isEditing ? "Edit Kegiatan" : "Tambah Kegiatan Baru"}
+                  </DialogTitle>
                   <DialogDescription>
-                    {isEditing ? "Perbarui detail kegiatan di bawah ini." : "Isi detail untuk kegiatan baru Anda."}
+                    {isEditing
+                      ? "Perbarui detail kegiatan di bawah ini."
+                      : "Isi detail untuk kegiatan baru Anda."}
                   </DialogDescription>
                 </DialogHeader>
+                
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="namaKegiatan">Nama Kegiatan</Label>
+                    <Label htmlFor="nama_kegiatan">Nama Kegiatan</Label>
                     <Input
-                      id="namaKegiatan"
-                      name="namaKegiatan"
-                      value={formData.namaKegiatan}
+                      id="nama_kegiatan"
+                      name="nama_kegiatan"
+                      value={formData.nama_kegiatan}
                       onChange={handleInputChange}
                       placeholder="Masukkan nama kegiatan"
+                      required
+                      string
                     />
+                    {error?.nama_kegiatan && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.nama_kegiatan[0]}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="hari">Hari</Label>
@@ -386,6 +546,7 @@ export default function Page() {
                       value={formData.hari}
                       onChange={handleInputChange}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      required
                     >
                       <option value="">Pilih hari</option>
                       <option value="Senin">Senin</option>
@@ -396,16 +557,28 @@ export default function Page() {
                       <option value="Sabtu">Sabtu</option>
                       <option value="Minggu">Minggu</option>
                     </select>
+                    {error?.hari && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.hari[0]}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="waktu">Waktu</Label>
                     <Input
                       id="waktu"
                       name="waktu"
+                      type="time"
                       value={formData.waktu}
                       onChange={handleInputChange}
                       placeholder="Contoh: 09:00-12:00"
+                      required
                     />
+                    {error?.waktu && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.waktu[0]}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="tempat">Tempat</Label>
@@ -415,17 +588,29 @@ export default function Page() {
                       value={formData.tempat}
                       onChange={handleInputChange}
                       placeholder="Masukkan lokasi kegiatan"
+                      required
                     />
+                    {error?.tempat && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.tempat[0]}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="penanggungJawab">Penanggung Jawab</Label>
+                    <Label htmlFor="penanggung_jawab">Penanggung Jawab</Label>
                     <Input
-                      id="penanggungJawab"
-                      name="penanggungJawab"
-                      value={formData.penanggungJawab}
+                      id="penanggung_jawab"
+                      name="penanggung_jawab"
+                      value={formData.penanggung_jawab}
                       onChange={handleInputChange}
                       placeholder="Masukkan nama penanggung jawab"
+                      required
                     />
+                    {error?.penanggung_jawab && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.penanggung_jawab[0]}
+                      </p>
+                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="keterangan">Keterangan</Label>
@@ -435,29 +620,50 @@ export default function Page() {
                       value={formData.keterangan}
                       onChange={handleInputChange}
                       placeholder="Masukkan keterangan tambahan"
+                      required
                     />
+                    {error?.keterangan && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.keterangan[0]}
+                      </p>
+                    )}
                   </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Batal</Button>
-                  <Button onClick={handleFormSubmit}>{isEditing ? "Simpan Perubahan" : "Tambah Kegiatan"}</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddModalOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button onClick={handleFormSubmit}>
+                    {isEditing ? "Simpan Perubahan" : "Tambah Kegiatan"}
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
 
             {/* Delete Confirmation Modal */}
-            <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <AlertDialog
+              open={isDeleteModalOpen}
+              onOpenChange={setIsDeleteModalOpen}
+            >
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Anda yakin?</AlertDialogTitle>
                   <AlertDialogDescription>
-                    Tindakan ini tidak dapat dibatalkan. Ini akan menghapus kegiatan 
-                    {selectedItem && ` "${selectedItem.namaKegiatan}"`} secara permanen dari database.
+                    Tindakan ini tidak dapat dibatalkan. Ini akan menghapus
+                    kegiatan
+                    {selectedItem && ` "${selectedItem.nama_kegiatan}"`} secara
+                    permanen dari database.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Batal</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
                     Hapus
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -467,5 +673,5 @@ export default function Page() {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
