@@ -583,7 +583,6 @@ export default function Page() {
                       onChange={handleInputChange}
                       placeholder="Masukkan nama kegiatan"
                       required
-                      string
                     />
                     {error?.nama_kegiatan && (
                       <p className="text-xs text-red-500 mt-1">
