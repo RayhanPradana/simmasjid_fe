@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
+import useAuthRedirect from "@/lib/auth";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -61,7 +63,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
-import toast from "react-hot-toast";
 
 export default function Page() {
   // Sample data untuk kegiatan
@@ -188,7 +189,7 @@ export default function Page() {
       const dataRes = await res.json();
 
       if (res.ok) {
-        alert(
+        toast.success(
           isEditing ? "Berhasil mengupdate data!" : "Berhasil menambahkan data!"
         );
         setIsAddModalOpen(false);
@@ -216,7 +217,7 @@ export default function Page() {
       }
     } catch (error) {
       console.error(error);
-      alert("Gagal terhubung ke server.");
+      toast.error("Gagal terhubung ke server.");
     }
   };
 
@@ -240,13 +241,13 @@ export default function Page() {
       if (res.ok) {
         // Hapus data dari state jika berhasil menghapus di server
         setData(data.filter((d) => d.id !== selectedItem.id));
-        alert("Data berhasil dihapus!");
+        toast.success("Data berhasil dihapus!");
       } else {
-        alert("Gagal menghapus data: " + (dataRes.message || "Unknown error"));
+        toast.error("Gagal menghapus data: " + (dataRes.message || "Unknown error"));
       }
     } catch (error) {
       console.error("Error:", error);
-      alert("Gagal terhubung ke server.");
+      toast.error("Gagal terhubung ke server.");
     }
 
     setIsDeleteModalOpen(false); // Tutup modal setelah proses selesai
@@ -257,6 +258,7 @@ export default function Page() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const isLoggedIni = useAuthRedirect();
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
   useEffect(() => {
@@ -280,8 +282,28 @@ export default function Page() {
         console.error("Gagal memuat data:", error);
       }
     };
-    fetchData();
-  }, []);
+    if (isLoggedIni) {
+      fetchData();
+    }
+  }, [isLoggedIni]);
+
+  
+      if (isLoggedIni === null) {
+      return ;
+    }
+  
+    if (isLoggedIni === false) {
+      return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+          <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+            <h2 className="text-lg font-semibold mb-4">
+              Login terlebih dahulu...
+            </h2>
+          </div>
+        </div>
+      );
+    }
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -506,6 +528,63 @@ export default function Page() {
                 )}
               </CardFooter>
             </Card>
+
+            {/* Dialog Detail Berita */}
+                        <Dialog
+                          open={isDetailModalOpen}
+                          onOpenChange={setIsDetailModalOpen}
+                        >
+                          <DialogContent className="max-w-lg">
+                            <DialogHeader>
+                              <DialogTitle>Detail Jadwal</DialogTitle>
+                              <DialogDescription>
+                                Informasi lengkap Jadwal Kegiatan.
+                              </DialogDescription>
+                            </DialogHeader>
+                            {detailItem && (
+                              <div className="grid gap-4 py-2">
+                                <Separator />
+                                <div className="space-y-1">
+                                  <h4 className="text-sm font-medium">Nama Kegiatan:</h4>
+                                  <p className="font-sm">{detailItem.nama_kegiatan}</p>
+                                </div>
+            
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-medium">Hari:</h4>
+                                  <p className="text-sm">{detailItem.hari}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-medium">Waktu:</h4>
+                                  <p className="text-sm">{detailItem.waktu}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-medium">Tempat:</h4>
+                                  <p className="text-sm">{detailItem.tempat}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-medium">Penanggung Jawab:</h4>
+                                  <p className="text-sm">{detailItem.penanggung_jawab}</p>
+                                </div>
+
+                                <div className="space-y-2">
+                                  <h4 className="text-sm font-medium">Keterangan:</h4>
+                                  <p className="text-sm">{detailItem.keterangan}</p>
+                                </div>
+                              </div>
+                            )}
+                            <DialogFooter>
+                              <Button
+                                variant="outline"
+                                onClick={() => setIsDetailModalOpen(false)}
+                              >
+                                Tutup
+                              </Button>
+                            </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
 
             {/* Add/Edit Modal */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>

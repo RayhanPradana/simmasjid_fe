@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import useAuthRedirect from "@/lib/auth";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -141,7 +142,6 @@ export default function Page() {
     if (formData.gambar) {
       form.append("gambar", formData.gambar);
     }
-
     if (isEditing) {
       form.append("_method", "PUT");
     }
@@ -250,6 +250,7 @@ export default function Page() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const isLoggedIni = useAuthRedirect();
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
   useEffect(() => {
@@ -272,9 +273,10 @@ export default function Page() {
       } catch (error) {
         console.error("Gagal memuat data:", error);
       }
-    };
-    fetchData();
-  }, []);
+    };if (isLoggedIni) {
+      fetchData();
+    }
+  }, [isLoggedIni]);
   // Helper function to generate placeholder image based on filename
   const getImagePlaceholder = (filename) => {
     if (!filename) {
@@ -293,6 +295,22 @@ export default function Page() {
 
     return { backgroundColor: color, filename: filename };
   };
+
+  if (isLoggedIni === null) {
+    return;
+  }
+
+  if (isLoggedIni === false) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <h2 className="text-lg font-semibold mb-4">
+            Login terlebih dahulu...
+          </h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -559,12 +577,12 @@ export default function Page() {
                         <span className="text-sm font-medium">Status: </span>
                         <span
                           className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            detailItem.status === "published"
+                            detailItem.status === "Publikasi"
                               ? "bg-green-100 text-green-700"
                               : "bg-amber-100 text-amber-700"
                           }`}
                         >
-                          {detailItem.status === "published"
+                          {detailItem.status === "Publikasi"
                             ? "Publikasi"
                             : "Draft"}
                         </span>
@@ -612,7 +630,6 @@ export default function Page() {
                         value={formData.judul}
                         onChange={handleInputChange}
                         placeholder="Masukkan judul berita"
-                        
                       />
                       {error?.judul && (
                         <p className="text-xs text-red-500 mt-1">
@@ -669,10 +686,10 @@ export default function Page() {
                           accept="image/*"
                         />
                         {error?.gambar && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {error.gambar[0]}
-                        </p>
-                      )}
+                          <p className="text-xs text-red-500 mt-1">
+                            {error.gambar[0]}
+                          </p>
+                        )}
                         {/* <Button
                           type="button"
                           variant="outline"
@@ -694,7 +711,7 @@ export default function Page() {
                         className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       >
                         <option value="">Pilih Status</option>
-                        <option value="Draf">Draf</option>
+                        <option value="Draft">Draft</option>
                         <option value="Publikasi">Publikasi</option>
                       </select>
                       {error?.status && (
