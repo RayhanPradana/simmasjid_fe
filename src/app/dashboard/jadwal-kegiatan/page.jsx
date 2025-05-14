@@ -102,14 +102,13 @@ export default function Page() {
     setCurrentPage(1);
   }, [searchTerm, data]);
 
-  // Handle form input change
-  const handleInputChange = (e) => {
-    const { id, value } = e.target;
-    setFormData({
-      ...formData,
-      [id]: value,
-    });
-  };
+ const handleInputChange = (e) => {
+  const { id, value } = e.target;
+  setFormData({
+    ...formData,
+    [id]: value,
+  });
+};
 
   // Open add modal
   const handleAddNew = () => {
@@ -507,57 +506,6 @@ export default function Page() {
                 )}
               </CardFooter>
             </Card>
-<Dialog
-              open={isDetailModalOpen}
-              onOpenChange={setIsDetailModalOpen}
-            >
-              <DialogContent className="max-w-lg">
-                <DialogHeader>
-                  <DialogTitle>Detail Jadwal</DialogTitle>
-                  <DialogDescription>
-                    Informasi lengkap Jadwal.
-                  </DialogDescription>
-                </DialogHeader>
-                {detailItem && (
-                  <div className="grid gap-4 py-2">
-                    <Separator />
-                    <div className="space-y-1">
-                      <h4 className="text-sm font-medium">Nama Kegiatan:</h4>
-                      <p className="font-sm">{detailItem.nama_kegiatan}</p>
-                    </div>
-                    
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Hari:</h4>
-                      <p className="text-sm">{detailItem.hari}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Waktu:</h4>
-                      <p className="text-sm">{detailItem.waktu}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Tempat:</h4>
-                      <p className="text-sm">{detailItem.tempat}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Penanggung Jawab:</h4>
-                      <p className="text-sm">{detailItem.penanggung_jawab}</p>
-                    </div>
-                    <div className="space-y-2">
-                      <h4 className="text-sm font-medium">Keterangan:</h4>
-                      <p className="text-sm">{detailItem.keterangan}</p>
-                    </div>
-                  </div>
-                )}
-                <DialogFooter>
-                  <Button
-                    variant="outline"
-                    onClick={() => setIsDetailModalOpen(false)}
-                  >
-                    Tutup
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
 
             {/* Add/Edit Modal */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
