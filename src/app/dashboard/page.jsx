@@ -24,7 +24,8 @@ import {
   ArrowDownCircle,
 } from "lucide-react";
 import useAuthRedirect from "@/lib/auth";
-import { useState, useEffect } from "react";
+import { motion} from "framer-motion";
+
 
 
 export default function Page() {
