@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import toast from "react-hot-toast";
+import useAuthRedirect from "@/lib/auth";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -141,7 +142,6 @@ export default function Page() {
     if (formData.gambar) {
       form.append("gambar", formData.gambar);
     }
-
     if (isEditing) {
       form.append("_method", "PUT");
     }
@@ -250,6 +250,7 @@ export default function Page() {
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+  const isLoggedIni = useAuthRedirect();
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
   useEffect(() => {
@@ -272,9 +273,10 @@ export default function Page() {
       } catch (error) {
         console.error("Gagal memuat data:", error);
       }
-    };
-    fetchData();
-  }, []);
+    };if (isLoggedIni) {
+      fetchData();
+    }
+  }, [isLoggedIni]);
   // Helper function to generate placeholder image based on filename
   const getImagePlaceholder = (filename) => {
     if (!filename) {
@@ -293,6 +295,22 @@ export default function Page() {
 
     return { backgroundColor: color, filename: filename };
   };
+
+  if (isLoggedIni === null) {
+    return;
+  }
+
+  if (isLoggedIni === false) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <h2 className="text-lg font-semibold mb-4">
+            Login terlebih dahulu...
+          </h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -523,7 +541,8 @@ export default function Page() {
                   <div className="grid gap-4 py-2">
                     <Separator />
                     <div className="space-y-1">
-                      <h3 className="font-semibold">{detailItem.judul}</h3>
+                      <h4 className="text-sm font-medium">Judul:</h4>
+                      <p className="font-sm">{detailItem.judul}</p>
                       <p className="text-sm text-gray-500">
                         {formatDate(detailItem.tanggal)}
                       </p>
@@ -611,7 +630,6 @@ export default function Page() {
                         value={formData.judul}
                         onChange={handleInputChange}
                         placeholder="Masukkan judul berita"
-                        
                       />
                       {error?.judul && (
                         <p className="text-xs text-red-500 mt-1">
@@ -668,10 +686,10 @@ export default function Page() {
                           accept="image/*"
                         />
                         {error?.gambar && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {error.gambar[0]}
-                        </p>
-                      )}
+                          <p className="text-xs text-red-500 mt-1">
+                            {error.gambar[0]}
+                          </p>
+                        )}
                         {/* <Button
                           type="button"
                           variant="outline"
