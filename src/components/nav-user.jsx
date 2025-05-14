@@ -1,8 +1,7 @@
 "use client";
 
 import { ChevronsUpDown, LogOut, User, Settings } from "lucide-react";
-
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -25,40 +24,56 @@ import { useRouter } from "next/navigation";
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
+  const [userImage, setUserImage] = useState(null);
+
+  useEffect(() => {
+    if (user?.image) {
+      setUserImage(user.image);
+    } else {
+      const storedUser = localStorage.getItem("user");
+      if (storedUser) {
+        try {
+          const parsed = JSON.parse(storedUser);
+          if (parsed.image) {
+            setUserImage(parsed.image);
+          }
+        } catch (error) {
+          console.error("Failed to parse user from localStorage:", error);
+        }
+      }
+    }
+  }, [user]);
 
   const handleLogout = async () => {
     try {
-      const token = localStorage.getItem('token');
+      const token = localStorage.getItem("token");
       if (!token) {
         alert("Token tidak ditemukan, Anda perlu login kembali.");
         return;
       }
-  
-      const response = await fetch('http://localhost:8000/api/logout', {
-        method: 'POST',
+
+      const response = await fetch("http://localhost:8000/api/logout", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-          'Accept': 'application/json',
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+          Accept: "application/json",
         },
       });
-  
-      console.log('Response Status:', response.status); 
-  
+
       if (response.ok) {
         localStorage.removeItem("token");
+        localStorage.removeItem("user");
         router.push("/login");
       } else {
         const errorData = await response.json();
-        console.error("Logout gagal:", errorData.message);
-        alert("Logout gagal: " + (errorData.message || 'Unknown error'));
+        alert("Logout gagal: " + (errorData.message || "Unknown error"));
       }
     } catch (error) {
       console.error("Error saat logout:", error);
       alert("Terjadi kesalahan saat logout");
     }
   };
-  
 
   return (
     <SidebarMenu>
@@ -69,38 +84,48 @@ export function NavUser({ user }) {
               size="lg"
               className="data-[state=open]:bg-sidebar-accent data-[state=open]:text-sidebar-accent-foreground"
             >
-              <Avatar className="h-8 w-8 rounded-lg">
-                <AvatarImage src={user.avatar} alt={user.name} />
-                <AvatarFallback className="rounded-lg">CN</AvatarFallback>
-              </Avatar>
+              <img
+                src={userImage || "/image/logo.png"}
+                alt="User Profile"
+                className="w-8 h-8 rounded-full object-cover"
+                onError={(e) => {
+                  e.currentTarget.src = "/image/logo.png";
+                }}
+              />
+
               <div className="grid flex-1 text-left text-sm leading-tight">
-                <span className="truncate font-medium">{user.name}</span>
-                <span className="truncate text-xs">{user.email}</span>
+                <span className="truncate font-medium">{user?.name}</span>
+                <span className="truncate text-xs">{user?.email}</span>
               </div>
               <ChevronsUpDown className="ml-auto size-4" />
             </SidebarMenuButton>
           </DropdownMenuTrigger>
+
           <DropdownMenuContent
-            className="w-(--radix-dropdown-menu-trigger-width) min-w-56 rounded-lg"
+            className="min-w-56 rounded-lg"
             side={isMobile ? "bottom" : "right"}
             align="end"
             sideOffset={4}
           >
             <DropdownMenuLabel className="p-0 font-normal">
               <div className="flex items-center gap-2 px-1 py-1.5 text-left text-sm">
-                <Avatar className="h-8 w-8 rounded-lg">
-                  <AvatarImage src={user.avatar} alt={user.name} />
-                  <AvatarFallback className="rounded-lg">FL</AvatarFallback>
-                </Avatar>
+                <img
+                  src={userImage || "/image/logo.png"}
+                  alt="User Profile"
+                  className="w-8 h-8 rounded-full object-cover"
+                  onError={(e) => {
+                    e.currentTarget.src = "/image/logo.png";
+                  }}
+                />
                 <div className="grid flex-1 text-left text-sm leading-tight">
-                  <span className="truncate font-medium">{user.name}</span>
-                  <span className="truncate text-xs">{user.email}</span>
+                  <span className="truncate font-medium">{user?.name}</span>
+                  <span className="truncate text-xs">{user?.email}</span>
                 </div>
               </div>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => router.push("/profile")}>
+              <DropdownMenuItem onClick={() => router.push("/dashboard/profile")}>
                 <User className="mr-2" />
                 Profile
               </DropdownMenuItem>

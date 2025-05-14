@@ -42,9 +42,7 @@ import {
 } from "lucide-react";
 
 export default function Page() {
-
     const router = useRouter();
-  
     const [scrollY, setScrollY] = useState(0);
     const [activeSection, setActiveSection] = useState("home");
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -59,21 +57,16 @@ export default function Page() {
   
     const backendUrl = "http://127.0.0.1:8000";
 
-    // Function to detect active section based on scroll
     useEffect(() => {
       const handleScroll = () => {
         setScrollY(window.scrollY);
+       const currentPosition = window.scrollY + 100; // Offset for header
         
-        // Detect which section is active based on scroll position
-        const currentPosition = window.scrollY + 100; // Offset for header
-        
-        // Find all section elements
         const sectionElements = sections.map(section => ({
           id: section.id,
           position: document.getElementById(section.id)?.offsetTop || 0
         }));
         
-        // Sort by position and find active section
         for (let i = sectionElements.length - 1; i >= 0; i--) {
           if (currentPosition >= sectionElements[i].position) {
             setActiveSection(sectionElements[i].id);
@@ -91,7 +84,7 @@ export default function Page() {
       if (element) {
         element.scrollIntoView({ behavior: "smooth" });
         setActiveSection(id);
-        setMobileMenuOpen(false); // Close mobile menu after clicking
+        setMobileMenuOpen(false); 
       }
     };
 
@@ -140,8 +133,8 @@ export default function Page() {
       
           if (response.ok) {
             localStorage.removeItem("token");
-            localStorage.removeItem("user"); // bersihkan user juga
-            setIsLoggedIn(false); // set kembali jadi false
+            localStorage.removeItem("user");
+            setIsLoggedIn(false); 
             router.push("/landing-page");
             toast.success("🎉 Logout berhasil!");
           } else {
