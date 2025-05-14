@@ -1,6 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
+import toast from "react-hot-toast";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,14 +9,14 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   Eye,
   Search,
@@ -23,10 +24,10 @@ import {
   Edit,
   Trash2,
   Image as ImageIcon,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -34,7 +35,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -44,7 +45,7 @@ import {
   AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
+} from "@/components/ui/alert-dialog";
 import {
   Card,
   CardContent,
@@ -52,155 +53,246 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 
 export default function Page() {
-  const initialData = [
-    {
-      id: 1,
-      date: "2025-05-01",
-      title: "Pembukaan Balai Desa Baru di Kecamatan Sukamaju",
-      content: "Pemerintah Kabupaten meresmikan pembukaan balai desa baru yang akan menjadi pusat kegiatan warga...",
-      image: "balai-desa.jpg",
-      status: "published"
-    },
-    {
-      id: 2,
-      date: "2025-04-28",
-      title: "Program Vaksinasi COVID-19 Booster Diluncurkan",
-      content: "Dinas Kesehatan mengumumkan peluncuran program vaksinasi booster COVID-19 untuk seluruh masyarakat...",
-      image: "vaksinasi.jpg",
-      status: "published"
-    },
-    {
-      id: 3,
-      date: "2025-04-20",
-      title: "Festival Budaya Tahunan Akan Digelar Bulan Depan",
-      content: "Festival budaya tahunan akan kembali digelar setelah vakum selama dua tahun akibat pandemi...",
-      image: "festival.jpg",
-      status: "draft"
-    },
-    {
-      id: 4,
-      date: "2025-04-15",
-      title: "Pembangunan Jalan Tol Ruas Timur Dimulai",
-      content: "Proyek pembangunan jalan tol yang akan menghubungkan wilayah timur kabupaten resmi dimulai...",
-      image: "jalan-tol.jpg",
-      status: "published"
-    },
-    {
-      id: 5,
-      date: "2025-04-10",
-      title: "Pelatihan Digital Marketing untuk UMKM",
-      content: "Dinas Koperasi dan UMKM mengadakan pelatihan digital marketing untuk membantu pelaku usaha mikro...",
-      image: "pelatihan.jpg",
-      status: "draft"
-    }
-  ]
-
-  const [data, setData] = useState(initialData)
-  const [filteredData, setFilteredData] = useState(initialData)
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
-  const [detailItem, setDetailItem] = useState(null)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [selectedItem, setSelectedItem] = useState(null)
-  const [formData, setFormData] = useState({ 
-    title: "", 
-    content: "", 
-    date: "", 
-    image: "", 
-    status: "" 
-  })
-  const [isEditing, setIsEditing] = useState(false)
-  const [currentPage, setCurrentPage] = useState(1)
-  const itemsPerPage = 5
+  const [data, setData] = useState([]);
+  const [error, setError] = useState({});
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+  const [formData, setFormData] = useState({
+    judul: "",
+    konten: "",
+    tanggal: "",
+    gambar: null,
+    status: "",
+  });
+  const [isEditing, setIsEditing] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 5;
 
   useEffect(() => {
-    const filtered = data.filter(item =>
-      item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.content.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.date.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.status.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    setFilteredData(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, data])
+    const filtered = data.filter(
+      (item) =>
+        item.judul.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.konten.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.tanggal.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.status.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredData(filtered);
+    setCurrentPage(1);
+  }, [searchTerm, data]);
 
   const handleInputChange = (e) => {
-    const { name, value } = e.target
-    setFormData({ ...formData, [name]: value })
-  }
+    const { id, value } = e.target;
+    setFormData({ ...formData, [id]: value });
+  };
+
+  const handleFileChange = (e) => {
+    setFormData({ ...formData, gambar: e.target.files[0] });
+  };
 
   const handleAddNew = () => {
-    setFormData({ 
-      title: "", 
-      content: "", 
-      date: new Date().toISOString().split('T')[0], 
-      image: "", 
-      status: "draft" 
-    })
-    setIsEditing(false)
-    setIsAddModalOpen(true)
-  }
+    setFormData({
+      judul: "",
+      konten: "",
+      //tanggal: "new Date().toISOString().split("T")[0]",
+      tanggal: "",
+      gambar: null,
+      status: "",
+    });
+    setIsEditing(false);
+    setIsAddModalOpen(true);
+  };
 
   const handleEdit = (item) => {
-    setFormData(item)
-    setIsEditing(true)
-    setIsAddModalOpen(true)
-  }
+    setFormData({
+      id: item.id,
+      judul: item.judul,
+      konten: item.konten,
+      tanggal: item.tanggal,
+      gambar: null,
+      status: item.status,
+    });
+    setIsEditing(true);
+    setIsAddModalOpen(true);
+  };
 
   const handleDeleteClick = (item) => {
-    setSelectedItem(item)
-    setIsDeleteModalOpen(true)
-  }
+    setSelectedItem(item);
+    setIsDeleteModalOpen(true);
+  };
 
-  const handleFormSubmit = () => {
-    if (isEditing) {
-      setData(data.map(d => (d.id === formData.id ? formData : d)))
-    } else {
-      const newItem = { ...formData, id: Date.now() }
-      setData([...data, newItem])
+  const handleFormSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    const token = localStorage.getItem("token");
+    const form = new FormData();
+
+    form.append("judul", formData.judul);
+    form.append("konten", formData.konten);
+    form.append("tanggal", formData.tanggal);
+    form.append("status", formData.status);
+    if (formData.gambar) {
+      form.append("gambar", formData.gambar);
     }
-    setIsAddModalOpen(false)
-  }
 
-  const handleDelete = () => {
-    setData(data.filter(d => d.id !== selectedItem.id))
-    setIsDeleteModalOpen(false)
-  }
+    if (isEditing) {
+      form.append("_method", "PUT");
+    }
+
+    try {
+      const url = isEditing
+        ? `http://localhost:8000/api/berita/${formData.id}`
+        : "http://localhost:8000/api/berita";
+
+      const method = isEditing ? "POST" : "POST";
+
+      const res = await fetch(url, {
+        method: method,
+        credentials: "include",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: form,
+      });
+
+      const dataRes = await res.json();
+
+      if (res.ok) {
+        toast.success(
+          isEditing ? "Berhasil mengupdate data!" : "Berhasil menambahkan data!"
+        );
+        setIsAddModalOpen(false);
+        setFormData({
+          judul: "",
+          konten: "",
+          tanggal: "",
+          status: "",
+          gambar: null,
+        });
+        // refresh data
+        const updated = await fetch("http://localhost:8000/api/berita", {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        const result = await updated.json();
+        setData(result.data || result);
+        setFilteredData(result.data || result);
+      } else if (dataRes.errors) {
+        setError(dataRes.errors);
+        console.log("Validation Errors:", dataRes.errors); // debug
+      } else {
+        setError({ general: [dataRes.message || "Gagal."] });
+      }
+    } catch (error) {
+      console.error(error);
+      toast.error("Gagal terhubung ke server.");
+    }
+  };
+
+  const handleDelete = async () => {
+    const token = localStorage.getItem("token");
+    try {
+      const res = await fetch(
+        `http://localhost:8000/api/berita/${selectedItem.id}`,
+        {
+          method: "DELETE",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+          },
+        }
+      );
+
+      const dataRes = await res.json();
+
+      if (res.ok) {
+        // Hapus data dari state jika berhasil menghapus di server
+        setData(data.filter((d) => d.id !== selectedItem.id));
+        toast.success("Data berhasil dihapus!");
+      } else {
+        toast.error(
+          "Gagal menghapus data: " + (dataRes.message || "Unknown error")
+        );
+      }
+    } catch (error) {
+      console.error("Error:", error);
+      toast.error("Gagal terhubung ke server.");
+    }
+
+    setIsDeleteModalOpen(false); // Tutup modal setelah proses selesai
+  };
 
   const handleDetails = (item) => {
-    setDetailItem(item)
-    setIsDetailModalOpen(true)
-  }
+    setDetailItem(item);
+    setIsDetailModalOpen(true);
+  };
 
   const formatDate = (dateString) => {
-    const options = { year: 'numeric', month: 'long', day: 'numeric' }
-    return new Date(dateString).toLocaleDateString('id-ID', options)
-  }
+    const options = { year: "numeric", month: "long", day: "numeric" };
+    return new Date(dateString).toLocaleDateString("id-ID", options);
+  };
 
   const truncateText = (text, maxLength) => {
-    return text.length > maxLength ? text.substring(0, maxLength) + '...' : text
-  }
+    return text.length > maxLength
+      ? text.substring(0, maxLength) + "..."
+      : text;
+  };
 
-  const indexOfLastItem = currentPage * itemsPerPage
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem)
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage)
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
 
-  const paginate = (pageNumber) => setCurrentPage(pageNumber)
-
+  const paginate = (pageNumber) => setCurrentPage(pageNumber);
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        const response = await fetch("http://127.0.0.1:8000/api/berita", {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+        if (!response.ok) {
+          throw new Error("Network response was not ok");
+        }
+        const result = await response.json();
+        setData(result.data || result);
+        setFilteredData(result.data || result);
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
+      }
+    };
+    fetchData();
+  }, []);
   // Helper function to generate placeholder image based on filename
   const getImagePlaceholder = (filename) => {
-    // Generate a consistent but unique color based on the filename
-    const hash = filename.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    if (!filename) {
+      // fallback color jika filename tidak tersedia
+      return "hsl(0, 0%, 80%)";
+    }
+
+    // Hitung hash berdasarkan charCode dari setiap karakter dalam filename tanpa .split
+    let hash = 0;
+    for (let i = 0; i < filename.length; i++) {
+      hash += filename.charCodeAt(i);
+    }
+
     const hue = hash % 360;
     const color = `hsl(${hue}, 70%, 80%)`;
-    
+
     return { backgroundColor: color, filename: filename };
-  }
+  };
 
   return (
     <SidebarProvider>
@@ -235,7 +327,11 @@ export default function Page() {
                     <CardTitle>Berita</CardTitle>
                     <CardDescription>Kelola data berita</CardDescription>
                   </div>
-                  <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
+                  <Button
+                    onClick={handleAddNew}
+                    size="sm"
+                    className="flex items-center gap-1"
+                  >
                     <Plus className="h-4 w-4" /> Tambah Berita
                   </Button>
                 </div>
@@ -270,34 +366,61 @@ export default function Page() {
                   {/* Isi Tabel */}
                   {currentItems.length > 0 ? (
                     currentItems.map((item) => {
-                      const imgPlaceholder = getImagePlaceholder(item.image);
+                      const imgPlaceholder = getImagePlaceholder(item.gambar);
                       return (
                         <div
                           key={item.id}
                           className="grid grid-cols-12 border-b hover:bg-gray-50 text-sm items-center"
                         >
-                          <div className="px-4 py-3 col-span-1 flex items-center">{item.id}</div>
+                          <div className="px-4 py-3 col-span-1 flex items-center">
+                            {item.id}
+                          </div>
                           <div className="px-2 py-2 col-span-1">
-                            <div 
+                            <div
                               className="w-12 h-12 rounded-md overflow-hidden flex items-center justify-center text-xs text-gray-600"
-                              style={{ backgroundColor: imgPlaceholder.backgroundColor }}
-                              title={item.image}
+                              style={{
+                                backgroundColor: imgPlaceholder.backgroundColor,
+                              }}
+                              title={item.gambar}
                             >
-                              <img src={`/api/placeholder/48/48`} alt={item.title} className="w-full h-full object-cover" />
+                              {/* Mengecek apakah gambar ada atau tidak */}
+                              <img
+                                src={
+                                  item.gambar
+                                    ? `http://localhost:8000/storage/${item.gambar}` // jika ada gambar
+                                    : "/image/logo.png" // jika tidak ada gambar, gunakan gambar default
+                                }
+                                // onError={(e) => {
+                                //   e.target.onerror = null;
+                                //   e.target.src =
+                                //     "image/logo.png"; // fallback image dari public/image/logo.png
+                                // }}
+                                alt={item.judul}
+                                className="w-full h-full object-cover"
+                              />
                             </div>
                           </div>
-                          <div className="px-4 py-3 col-span-2">{formatDate(item.date)}</div>
-                          <div className="px-4 py-3 col-span-3 font-medium">{truncateText(item.title, 35)}</div>
-                          <div className="px-4 py-3 col-span-2 text-gray-600">{truncateText(item.content, 35)}</div>
+
+                          <div className="px-4 py-3 col-span-2">
+                            {formatDate(item.tanggal)}
+                          </div>
+                          <div className="px-4 py-3 col-span-3 font-medium">
+                            {truncateText(item.judul, 35)}
+                          </div>
+                          <div className="px-4 py-3 col-span-2 text-gray-600">
+                            {truncateText(item.konten, 35)}
+                          </div>
                           <div className="px-4 py-3 col-span-1">
                             <span
                               className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                item.status === "published"
+                                item.status === "Publikasi"
                                   ? "bg-green-100 text-green-700"
                                   : "bg-amber-100 text-amber-700"
                               }`}
                             >
-                              {item.status === "published" ? "Publikasi" : "Draft"}
+                              {item.status === "Publikasi"
+                                ? "Publikasi"
+                                : "Draft"}
                             </span>
                           </div>
                           <div className="px-4 py-3 col-span-2 text-right">
@@ -347,7 +470,9 @@ export default function Page() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => paginate(currentPage > 1 ? currentPage - 1 : 1)}
+                      onClick={() =>
+                        paginate(currentPage > 1 ? currentPage - 1 : 1)
+                      }
                       disabled={currentPage === 1}
                     >
                       Previous
@@ -366,7 +491,13 @@ export default function Page() {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => paginate(currentPage < totalPages ? currentPage + 1 : totalPages)}
+                      onClick={() =>
+                        paginate(
+                          currentPage < totalPages
+                            ? currentPage + 1
+                            : totalPages
+                        )
+                      }
                       disabled={currentPage === totalPages}
                     >
                       Next
@@ -377,36 +508,51 @@ export default function Page() {
             </Card>
 
             {/* Dialog Detail Berita */}
-            <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+            <Dialog
+              open={isDetailModalOpen}
+              onOpenChange={setIsDetailModalOpen}
+            >
               <DialogContent className="max-w-lg">
                 <DialogHeader>
                   <DialogTitle>Detail Berita</DialogTitle>
-                  <DialogDescription>Informasi lengkap berita.</DialogDescription>
+                  <DialogDescription>
+                    Informasi lengkap berita.
+                  </DialogDescription>
                 </DialogHeader>
                 {detailItem && (
                   <div className="grid gap-4 py-2">
                     <Separator />
                     <div className="space-y-1">
-                      <h3 className="font-semibold">{detailItem.title}</h3>
-                      <p className="text-sm text-gray-500">{formatDate(detailItem.date)}</p>
+                      <h3 className="font-semibold">{detailItem.judul}</h3>
+                      <p className="text-sm text-gray-500">
+                        {formatDate(detailItem.tanggal)}
+                      </p>
                     </div>
-                    
+
                     <div className="bg-gray-100 border rounded-md p-4 flex items-center justify-center h-48">
-                      {detailItem.image && (
-                        <div 
+                      {detailItem.gambar && (
+                        <div
                           className="w-full h-full rounded-md overflow-hidden flex items-center justify-center"
-                          style={{ backgroundColor: getImagePlaceholder(detailItem.image).backgroundColor }}
+                          style={{
+                            backgroundColor: getImagePlaceholder(
+                              detailItem.gambar
+                            ).backgroundColor,
+                          }}
                         >
-                          <img src={`/api/placeholder/300/200`} alt={detailItem.title} className="max-w-full max-h-full object-cover" />
+                          <img
+                            src={`http://localhost:8000/storage/${detailItem.gambar}`}
+                            alt={detailItem.judul}
+                            className="max-w-full max-h-full object-cover"
+                          />
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Konten Berita:</h4>
-                      <p className="text-sm">{detailItem.content}</p>
+                      <p className="text-sm">{detailItem.konten}</p>
                     </div>
-                    
+
                     <div className="flex justify-between items-center">
                       <div>
                         <span className="text-sm font-medium">Status: </span>
@@ -417,15 +563,24 @@ export default function Page() {
                               : "bg-amber-100 text-amber-700"
                           }`}
                         >
-                          {detailItem.status === "published" ? "Publikasi" : "Draft"}
+                          {detailItem.status === "published"
+                            ? "Publikasi"
+                            : "Draft"}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-500">ID: {detailItem.id}</span>
+                      <span className="text-sm text-gray-500">
+                        ID: {detailItem.id}
+                      </span>
                     </div>
                   </div>
                 )}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>Tutup</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDetailModalOpen(false)}
+                  >
+                    Tutup
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -434,103 +589,160 @@ export default function Page() {
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
               <DialogContent className="max-w-lg">
                 <DialogHeader>
-                  <DialogTitle>{isEditing ? "Edit Berita" : "Tambah Berita Baru"}</DialogTitle>
+                  <DialogTitle>
+                    {isEditing ? "Edit Berita" : "Tambah Berita Baru"}
+                  </DialogTitle>
                   <DialogDescription>
-                    {isEditing ? "Perbarui informasi berita di bawah ini." : "Isi detail berita baru Anda."}
+                    {isEditing
+                      ? "Perbarui informasi berita di bawah ini."
+                      : "Isi detail berita baru Anda."}
                   </DialogDescription>
                 </DialogHeader>
-                <div className="grid gap-4 py-4">
-                  <div className="grid gap-2">
-                    <Label htmlFor="title">Judul Berita</Label>
-                    <Input
-                      id="title"
-                      name="title"
-                      value={formData.title}
-                      onChange={handleInputChange}
-                      placeholder="Masukkan judul berita"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="date">Tanggal</Label>
-                    <Input
-                      id="date"
-                      name="date"
-                      type="date"
-                      value={formData.date}
-                      onChange={handleInputChange}
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="content">Konten Berita</Label>
-                    <textarea
-                      id="content"
-                      name="content"
-                      value={formData.content}
-                      onChange={handleInputChange}
-                      placeholder="Masukkan konten berita"
-                      className="min-h-[120px] flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="image">Gambar</Label>
-                    <div className="flex gap-2">
+
+                {/* Mulai form */}
+                <form onSubmit={handleFormSubmit}>
+                  <div className="grid gap-4 py-4">
+                    {/* Judul */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="judul">Judul Berita</Label>
                       <Input
-                        id="image"
-                        name="image"
-                        value={formData.image}
+                        id="judul"
+                        name="judul"
+                        value={formData.judul}
                         onChange={handleInputChange}
-                        placeholder="Nama file gambar"
-                        className="flex-1"
+                        placeholder="Masukkan judul berita"
+                        
                       />
-                      <Button type="button" variant="outline" className="flex items-center gap-1">
-                        <ImageIcon className="h-4 w-4" /> Pilih
-                      </Button>
+                      {error?.judul && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {error.judul[0]}
+                        </p>
+                      )}
                     </div>
-                    {formData.image && (
-                      <div className="mt-2 p-2 border rounded-md flex items-center justify-center h-24">
-                        <div 
-                          className="w-20 h-20 rounded overflow-hidden flex items-center justify-center"
-                          style={{ backgroundColor: getImagePlaceholder(formData.image).backgroundColor }}
+
+                    {/* Tanggal */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="tanggal">Tanggal</Label>
+                      <Input
+                        id="tanggal"
+                        name="tanggal"
+                        type="date"
+                        value={formData.tanggal}
+                        onChange={handleInputChange}
+                      />
+                      {error?.tanggal && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {error.tanggal[0]}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Konten */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="konten">Konten Berita</Label>
+                      <textarea
+                        id="konten"
+                        name="konten"
+                        value={formData.konten}
+                        onChange={handleInputChange}
+                        placeholder="Masukkan konten berita"
+                        className="min-h-[120px] flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                      {error?.konten && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {error.konten[0]}
+                        </p>
+                      )}
+                    </div>
+
+                    {/* Gambar */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="gambar">Gambar</Label>
+                      <div className="flex gap-2">
+                        <Input
+                          id="gambar"
+                          name="gambar"
+                          type="file"
+                          onChange={handleFileChange}
+                          className="flex-1"
+                          accept="image/*"
+                        />
+                        {error?.gambar && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {error.gambar[0]}
+                        </p>
+                      )}
+                        {/* <Button
+                          type="button"
+                          variant="outline"
+                          className="flex items-center gap-1"
                         >
-                          <img src={`/api/placeholder/80/80`} alt="Preview" className="max-w-full max-h-full object-cover" />
-                        </div>
+                          <ImageIcon className="h-4 w-4" /> Pilih
+                        </Button> */}
                       </div>
-                    )}
+                    </div>
+
+                    {/* Status */}
+                    <div className="grid gap-2">
+                      <Label htmlFor="status">Status</Label>
+                      <select
+                        id="status"
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Pilih Status</option>
+                        <option value="Draf">Draf</option>
+                        <option value="Publikasi">Publikasi</option>
+                      </select>
+                      {error?.status && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {error.status[0]}
+                        </p>
+                      )}
+                    </div>
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="status">Status</Label>
-                    <select
-                      id="status"
-                      name="status"
-                      value={formData.status}
-                      onChange={handleInputChange}
-                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+
+                  {/* Footer dengan tombol */}
+                  <DialogFooter>
+                    <Button
+                      variant="outline"
+                      type="button"
+                      onClick={() => setIsAddModalOpen(false)}
                     >
-                      <option value="draft">Draft</option>
-                      <option value="published">Publikasi</option>
-                    </select>
-                  </div>
-                </div>
-                <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Batal</Button>
-                  <Button onClick={handleFormSubmit}>{isEditing ? "Simpan Perubahan" : "Tambah Berita"}</Button>
-                </DialogFooter>
+                      Batal
+                    </Button>
+                    <Button type="submit">
+                      {isEditing ? "Simpan Perubahan" : "Tambah Berita"}
+                    </Button>
+                  </DialogFooter>
+                </form>
+                {/* Tutup form */}
               </DialogContent>
             </Dialog>
 
             {/* Delete Confirmation Modal */}
-            <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+            <AlertDialog
+              open={isDeleteModalOpen}
+              onOpenChange={setIsDeleteModalOpen}
+            >
               <AlertDialogContent>
                 <AlertDialogHeader>
                   <AlertDialogTitle>Apakah Anda yakin?</AlertDialogTitle>
                   <AlertDialogDescription>
                     Tindakan ini tidak dapat dibatalkan. Berita
-                    {selectedItem && ` "${truncateText(selectedItem.title, 30)}"`} akan dihapus secara permanen dari database.
+                    {selectedItem &&
+                      ` "${truncateText(selectedItem.judul, 30)}"`}{" "}
+                    akan dihapus secara permanen dari database.
                   </AlertDialogDescription>
                 </AlertDialogHeader>
                 <AlertDialogFooter>
                   <AlertDialogCancel>Batal</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
                     Hapus
                   </AlertDialogAction>
                 </AlertDialogFooter>
@@ -540,5 +752,5 @@ export default function Page() {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }
