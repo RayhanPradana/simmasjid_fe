@@ -523,7 +523,8 @@ export default function Page() {
                   <div className="grid gap-4 py-2">
                     <Separator />
                     <div className="space-y-1">
-                      <h3 className="font-semibold">{detailItem.judul}</h3>
+                      <h4 className="text-sm font-medium">Judul:</h4>
+                      <p className="font-sm">{detailItem.judul}</p>
                       <p className="text-sm text-gray-500">
                         {formatDate(detailItem.tanggal)}
                       </p>
