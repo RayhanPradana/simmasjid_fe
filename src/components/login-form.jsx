@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useRouter } from "next/navigation";
+import { Eye, EyeOff } from "lucide-react";
 import toast from "react-hot-toast";
 
 export function LoginForm({ className, ...props }) {
@@ -22,6 +23,8 @@ export function LoginForm({ className, ...props }) {
   const handleChange = (e) => {
     setForm({ ...form, [e.target.id]: e.target.value });
   };
+
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,14 +51,14 @@ export function LoginForm({ className, ...props }) {
       if (res.ok) {
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("user", JSON.stringify(data.user));
-    
+
         //alert("Login berhasil!");
         toast.success("🎉 Login berhasil! Selamat datang kembali.");
         const redirectPath = new URL(data.redirect).pathname;
         router.push(redirectPath);
-    } else {
+      } else {
         setError(data.message || "Login gagal.");
-    }
+      }
     } catch (err) {
       console.error(err);
       setError("Gagal terhubung ke server.");
@@ -103,13 +106,24 @@ export function LoginForm({ className, ...props }) {
                     Lupa Password?
                   </a>
                 </div>
-                <Input
-                  id="password"
-                  type="password"
-                  value={form.password}
-                  onChange={handleChange}
-                  required
-                />
+                <div className="relative">
+                  <Input
+                    id="password"
+                    type={showPassword ? "text" : "password"}
+                    value={form.password}
+                    onChange={handleChange}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((prev) => !prev)}
+                    className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground"
+                    tabIndex={-1}
+                  >
+                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  </button>
+                </div>
               </div>
 
               {error && (

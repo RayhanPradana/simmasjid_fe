@@ -1,12 +1,12 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
   BreadcrumbList,
+  BreadcrumbPage,
+  BreadcrumbSeparator,
 } from "@/components/ui/breadcrumb";
 import { Separator } from "@/components/ui/separator";
 import {
@@ -225,6 +225,6 @@ function StatCard({ title, value, icon, color, delay = 0 }) {
           {value}
         </motion.h3>
       </div>
-    </motion.div>
-  );
+    </div>
+  )
 }
