@@ -23,159 +23,140 @@ import {
   Building2,
   ArrowDownCircle,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
-import { cn } from "@/lib/utils";
+import useAuthRedirect from "@/lib/auth";
+import { useState, useEffect } from "react";
 
-export default function DashboardPage() {
-  const pathname = usePathname();
-  const [isLoaded, setIsLoaded] = useState(false);
 
-  useEffect(() => {
-    setIsLoaded(true);
-  }, []);
+export default function Page() {
+  const isLoggedIni = useAuthRedirect();
+
+    if (isLoggedIni === null) {
+    return ;
+  }
+
+  if (isLoggedIni === false) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <h2 className="text-lg font-semibold mb-4">
+            Login terlebih dahulu...
+          </h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <SidebarProvider>
-      <AppSidebar />
-      <SidebarInset>
-        {/* Header with Animation */}
-        <motion.header 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-          className="flex h-16 items-center gap-2 border-b bg-white px-4 shadow-sm sticky top-0 z-10"
-        >
-          <div className="flex items-center gap-2">
-            <SidebarTrigger className="-ml-1" />
-            <Separator orientation="vertical" className="h-4 mr-2" />
-            <Breadcrumb>
-              <BreadcrumbList>
-                <BreadcrumbItem className="hidden md:block">
-                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                </BreadcrumbItem>
-              </BreadcrumbList>
-            </Breadcrumb>
-          </div>
-        </motion.header>
+    // <div className="p-4">
+    //   {isLoading ? (
+    //     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+    //       <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+    //         <h2 className="text-lg font-semibold mb-4">
+    //           Login terlebih dahulu...
+    //         </h2>
+    //       </div>
+    //     </div>
+    //   ) : (
+    //     <>
+          <SidebarProvider>
+            <AppSidebar />
+            <SidebarInset>
+              {/* Header */}
+              <header className="flex h-16 items-center gap-2 border-b bg-white px-4 shadow-sm">
+                <div className="flex items-center gap-2">
+                  <SidebarTrigger className="-ml-1" />
+                  <Separator orientation="vertical" className="h-4 mr-2" />
+                  <Breadcrumb>
+                    <BreadcrumbList>
+                      <BreadcrumbItem className="hidden md:block">
+                        <BreadcrumbLink href="/dashboard">
+                          Dashboard
+                        </BreadcrumbLink>
+                      </BreadcrumbItem>
+                      <BreadcrumbSeparator className="hidden md:block" />
+                      <BreadcrumbItem>
+                        <BreadcrumbPage>Home</BreadcrumbPage>
+                      </BreadcrumbItem>
+                    </BreadcrumbList>
+                  </Breadcrumb>
+                </div>
+              </header>
 
-        {/* Konten Dashboard with Page Transition */}
-        <AnimatePresence mode="wait">
-          <motion.main
-            key={pathname}
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: isLoaded ? 1 : 0, y: isLoaded ? 0 : 20 }}
-            exit={{ opacity: 0, y: -20 }}
-            transition={{ duration: 0.4, ease: "easeInOut" }}
-            className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans"
-          >
-            <motion.section
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1, duration: 0.4 }}
-            >
-              <motion.h1 
-                className="text-3xl font-bold text-[#00a63e]"
-                initial={{ opacity: 0, y: 5 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.2, duration: 0.3 }}
-              >
-                Selamat datang di Dashboard, Admin Fulan!
-              </motion.h1>
-              <motion.p 
-                className="text-gray-700 mt-1"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.3, duration: 0.3 }}
-              >
-                Berikut ringkasan aktivitas Masjid hari ini.
-              </motion.p>
-            </motion.section>
+              {/* Konten Dashboard */}
+              <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
+                <section>
+                  <h1 className="text-3xl font-bold text-[#00a63e]">
+                    Selamat datang di Dashboard, Admin Fulan!
+                  </h1>
+                  <p className="text-gray-700 mt-1">
+                    Berikut ringkasan aktivitas Masjid hari ini.
+                  </p>
+                </section>
 
-            {/* Statistik with Staggered Animation */}
-            <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
-              {[
-                {
-                  title: "Dana Masuk",
-                  value: "Rp 25.400.000",
-                  icon: <CreditCard className="text-white" size={28} />,
-                  color: "#00a63e",
-                  delay: 0.2
-                },
-                {
-                  title: "Dana Keluar",
-                  value: "Rp 8.700.000",
-                  icon: <ArrowDownCircle className="text-white" size={28} />,
-                  color: "#278e3b",
-                  delay: 0.3
-                },
-                {
-                  title: "Jumlah Jamaah",
-                  value: "850 Orang",
-                  icon: <Users className="text-white" size={28} />,
-                  color: "#1f6f2d",
-                  delay: 0.4
-                },
-                {
-                  title: "Jadwal Hari Ini",
-                  value: "Pengajian Ibu-Ibu",
-                  icon: <CalendarCheck2 className="text-white" size={28} />,
-                  color: "#138f44",
-                  delay: 0.5
-                },
-                {
-                  title: "Berita Aktif",
-                  value: "5 Artikel",
-                  icon: <Newspaper className="text-white" size={28} />,
-                  color: "#0d7f3a",
-                  delay: 0.6
-                },
-                {
-                  title: "Reservasi Hari Ini",
-                  value: "3 Reservasi",
-                  icon: <Building2 className="text-white" size={28} />,
-                  color: "#06632e",
-                  delay: 0.7
-                }
-              ].map((stat, index) => (
-                <StatCard
-                  key={index}
-                  title={stat.title}
-                  value={stat.value}
-                  icon={stat.icon}
-                  color={stat.color}
-                  delay={stat.delay}
-                />
-              ))}
-            </section>
+                {/* Statistik */}
+                <section className="grid gap-4 grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4">
+                  {/* Total Dana Masuk */}
+                  <StatCard
+                    title="Dana Masuk"
+                    value="Rp 25.400.000"
+                    icon={<CreditCard className="text-white" size={28} />}
+                    color="#00a63e"
+                  />
+                  {/* Total Dana Keluar */}
+                  <StatCard
+                    title="Dana Keluar"
+                    value="Rp 8.700.000"
+                    icon={<ArrowDownCircle className="text-white" size={28} />}
+                    color="#278e3b"
+                  />
+                  {/* Jumlah Jamaah */}
+                  <StatCard
+                    title="Jumlah Jamaah"
+                    value="850 Orang"
+                    icon={<Users className="text-white" size={28} />}
+                    color="#1f6f2d"
+                  />
+                  {/* Jadwal Hari Ini */}
+                  <StatCard
+                    title="Jadwal Hari Ini"
+                    value="Pengajian Ibu-Ibu"
+                    icon={<CalendarCheck2 className="text-white" size={28} />}
+                    color="#138f44"
+                  />
+                  {/* Berita Aktif */}
+                  <StatCard
+                    title="Berita Aktif"
+                    value="5 Artikel"
+                    icon={<Newspaper className="text-white" size={28} />}
+                    color="#0d7f3a"
+                  />
+                  {/* Reservasi Fasilitas */}
+                  <StatCard
+                    title="Reservasi Hari Ini"
+                    value="3 Reservasi"
+                    icon={<Building2 className="text-white" size={28} />}
+                    color="#06632e"
+                  />
+                </section>
 
-            {/* Konten Tambahan with Animation */}
-            <motion.section 
-              className="mt-6 bg-white rounded-xl shadow p-6 text-gray-700"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.8, duration: 0.5 }}
-            >
-              <motion.h2 
-                className="text-xl font-semibold mb-2 text-[#00a63e]"
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.9, duration: 0.4 }}
-              >
-                Informasi Tambahan
-              </motion.h2>
-              <motion.p
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 1.0, duration: 0.4 }}
-              >
-                SIMASJID membantu pengelolaan kegiatan, keuangan, dan fasilitas masjid secara modern dan efisien. 
-                Anda dapat menambahkan berita terbaru, mencatat transaksi, mengatur jadwal, hingga memantau reservasi fasilitas.
-              </motion.p>
-            </motion.section>
-          </motion.main>
-        </AnimatePresence>
-      </SidebarInset>
-    </SidebarProvider>
+                {/* Konten Tambahan */}
+                <section className="mt-6 bg-white rounded-xl shadow p-6 text-gray-700">
+                  <h2 className="text-xl font-semibold mb-2 text-[#00a63e]">
+                    Informasi Tambahan
+                  </h2>
+                  <p>
+                    SIMASJID membantu pengelolaan kegiatan, keuangan, dan
+                    fasilitas masjid secara modern dan efisien. Anda dapat
+                    menambahkan berita terbaru, mencatat transaksi, mengatur
+                    jadwal, hingga memantau reservasi fasilitas.
+                  </p>
+                </section>
+              </main>
+            </SidebarInset>
+          </SidebarProvider>
+    //     </>
+    //   )}
+    // </div>
   );
 }
 
@@ -225,6 +206,6 @@ function StatCard({ title, value, icon, color, delay = 0 }) {
           {value}
         </motion.h3>
       </div>
-    </div>
-  )
+    </motion.div>
+  );
 }
