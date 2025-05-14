@@ -236,7 +236,7 @@ export default function Page() {
                     <CardDescription>Kelola data berita</CardDescription>
                   </div>
                   <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
-                    <Plus className="h-4 w-4" /> Tambah Berita
+                    <Plus className="h-4 w-4" /> Tambah Data
                   </Button>
                 </div>
               </CardHeader>

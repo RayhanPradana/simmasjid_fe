@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import { BookOpen } from "lucide-react";
+import Link from "next/link";
 import {
   SidebarMenu,
   SidebarMenuButton,
@@ -24,10 +25,12 @@ export function TeamSwitcher() {
           <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-green-600 text-white">
             <BookOpen className="size-4" />
           </div>
+          <Link href="/dashboard" className="no-underline hover:opacity-80">
           <div className="grid flex-1 text-left text-sm leading-tight group-data-[collapsed=true]:hidden">
             <span className="truncate font-semibold">SIMASJID</span>
             <span className="truncate text-xs text-muted-foreground">Dashboard</span>
           </div>
+          </Link>
         </SidebarMenuButton>
       </SidebarMenuItem>
     </SidebarMenu>
