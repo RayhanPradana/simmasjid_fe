@@ -22,8 +22,6 @@ import {
   Eye,
   Search,
   Plus,
-  Edit,
-  Trash2,
   Calendar,
   Loader2,
 } from "lucide-react"
@@ -38,16 +36,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from "@/components/ui/alert-dialog"
 import {
   Card,
   CardContent,
@@ -64,10 +52,11 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useToast } from "@/components/ui/use-toast"
+import toast from "react-hot-toast";
+import { TrendingDown, TrendingUp, Wallet } from "lucide-react"
+
 
 export default function Page() {
-  const { toast } = useToast()
   const API_BASE_URL = "http://127.0.0.1:8000/api/keuangan"
 
   const [data, setData] = useState([])
@@ -76,27 +65,44 @@ export default function Page() {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [detailItem, setDetailItem] = useState(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
-  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
-  const [selectedItem, setSelectedItem] = useState(null)
   const [formData, setFormData] = useState({
+    tanggal: getCurrentFormattedDate(),
     jenis: "",
-    jumlah: "",
-    sumber: "",
     deskripsi: "",
-    tanggal: ""
+    total_masuk: "",
+    total_keluar: "",
   })
-  const [isEditing, setIsEditing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [transactionType, setTransactionType] = useState("pemasukan")
   const itemsPerPage = 5
 
   // Format current date to YYYY-MM-DD for default value
-  const getCurrentFormattedDate = () => {
+  function getCurrentFormattedDate() {
     const now = new Date();
     const year = now.getFullYear();
     const month = String(now.getMonth() + 1).padStart(2, '0');
     const day = String(now.getDate()).padStart(2, '0');
     return `${year}-${month}-${day}`;
+  }
+
+  // Format currency with preserved zeros
+  function formatCurrency(amount) {
+    // Check if amount is null, undefined, or empty string
+    if (amount === null || amount === undefined || amount === "") return "Rp 0";
+    
+    // If the amount is already a formatted string starting with "Rp", return it
+    if (typeof amount === 'string' && amount.startsWith('Rp ')) return amount;
+    
+    // Parse amount to number
+    const numAmount = Number(amount);
+    
+    // Format with thousands separator while preserving zeros
+    // Format to always show trailing zeros
+    return `Rp ${numAmount.toLocaleString("id-ID", {
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    })}`;
   }
 
   // Fetch data on component mount
@@ -108,10 +114,10 @@ export default function Page() {
   useEffect(() => {
     const filtered = data.filter(item => 
       item.jenis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.jumlah?.toString().toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.sumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase()) 
+      (item.total_masuk && item.total_masuk.toString().includes(searchTerm)) ||
+      (item.total_keluar && item.total_keluar.toString().includes(searchTerm)) ||
+      item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase())
     )
     setFilteredData(filtered)
     setCurrentPage(1)
@@ -139,11 +145,7 @@ export default function Page() {
       setFilteredData(result.data || result);
     } catch (error) {
       console.error("Gagal memuat data:", error);
-      toast({
-        title: "Error",
-        description: "Gagal memuat data. Silakan coba lagi.",
-        variant: "destructive",
-      });
+      toast.error("Gagal memuat data. Silakan coba lagi.");
     }
     finally {
       setIsLoading(false);
@@ -151,271 +153,144 @@ export default function Page() {
   };
 
   // CREATE - Tambah data baru
-  const createData = async (formData) => {
-    setIsLoading(true)
-    try {
-      // Ensure data matches the database structure
-      const sanitizedData = {
-        jenis: formData.jenis,
-        jumlah: parseFloat(formData.jumlah.replace(/[^\d.-]/g, '')), // Remove non-numeric characters except decimal point
-        sumber: formData.sumber,
-        deskripsi: formData.deskripsi,
-        tanggal: formData.tanggal // Pass the date value directly
-      };
-
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(sanitizedData),
-      })
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        console.error("API Error:", errorData);
-        toast({
-          title: "Error",
-          description: "Gagal menambahkan data. " + (errorData.message || ""),
-          variant: "destructive",
-        });
-        return false;
-      }
-      
-      toast({
-        title: "Berhasil",
-        description: "Data keuangan baru berhasil ditambahkan",
-      });
-      
-      return true;
-    } catch (error) {
-      console.error("Error saat menambah data:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat menambahkan data",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false)
+const createData = async (formData) => {
+  setIsLoading(true)
+  try {
+    // Extract numeric values from formatted currency strings
+    let totalMasuk = 0;
+    let totalKeluar = 0;
+    
+    if (transactionType === "pemasukan" && formData.total_masuk) {
+      // Extract only numeric values from the formatted string (e.g., "Rp 1.000.000" -> 1000000)
+      // Replace all dots (thousand separators) and "Rp " prefix before parsing
+      totalMasuk = parseInt(formData.total_masuk.replace(/[^\d]/g, ''), 10);
     }
-  }  
-
-  // UPDATE - Update Data
-  const updateData = async (id, formData) => {
-    setIsLoading(true)
-    try {
-      // Ensure data matches the database structure
-      const sanitizedData = {
-        jenis: formData.jenis,
-        jumlah: parseFloat(formData.jumlah.replace(/[^\d.-]/g, '')), // Remove non-numeric characters except decimal point
-        sumber: formData.sumber,
-        deskripsi: formData.deskripsi,
-        tanggal: formData.tanggal // Pass the date value directly
-      };
-
-      console.log("Sending update with data:", sanitizedData);
-
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-        body: JSON.stringify(sanitizedData),
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast({
-          title: "Error",
-          description: "Gagal memperbarui data. " + (errorData.message || ""),
-          variant: "destructive",
-        });
-        return false;
-      }
-  
-      toast({
-        title: "Berhasil",
-        description: "Data keuangan berhasil diperbarui",
-      });
-      return true;
-    } catch (error) {
-      console.error("Error saat memperbarui data:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat memperbarui data",
-        variant: "destructive",
-      });
-      return false;
-    } finally {
-      setIsLoading(false);
+    
+    if (transactionType === "pengeluaran" && formData.total_keluar) {
+      // Extract only numeric values from the formatted string
+      totalKeluar = parseInt(formData.total_keluar.replace(/[^\d]/g, ''), 10);
     }
+    
+    // Ensure data matches the database structure
+    const sanitizedData = {
+      tanggal: formData.tanggal,
+      jenis: formData.jenis,
+      deskripsi: formData.deskripsi || null,
+      total_masuk: totalMasuk,
+      total_keluar: totalKeluar
+    };
+
+    const token = localStorage.getItem("token");
+    const response = await fetch(`${API_BASE_URL}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Accept": "application/json",
+        "Authorization": `Bearer ${token}`,
+      },
+      body: JSON.stringify(sanitizedData),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error("API Error:", errorData);
+      toast.error("Gagal menambahkan data. " + (errorData.message || ""));
+      return false;
+    }
+    toast.success("Data keuangan berhasil ditambahkan.");
+    
+    return true;
+  } catch (error) {
+    console.error("Error saat menambah data:", error);
+    toast.error("Terjadi kesalahan saat menambahkan data");
+    return false;
+  } finally {
+    setIsLoading(false)
   }
-  
-  // DELETE - Delete Data
-  const deleteData = async (id) => {
-    setIsLoading(true)
-    try {
-      const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "DELETE",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      });
-  
-      if (!response.ok) {
-        const errorData = await response.json();
-        toast({
-          title: "Error",
-          description: "Gagal menghapus data. " + (errorData.message || ""),
-          variant: "destructive",
-        });
-        return false;
-      }
-  
-      toast({
-        title: "Berhasil",
-        description: "Data keuangan berhasil dihapus",
-      });
-      return true;
-    } catch (error) {
-      console.error("Error saat menghapus data:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat menghapus data",
-        variant: "destructive",
-      });
-      return false;
-    }
-    finally {
-      setIsLoading(false);
-    }
-  }
+}
 
   const handleInputChange = (e) => {
-  const { name, value } = e.target;
+    const { name, value } = e.target;
 
-  if (name === "jumlah") {
-    // Hapus semua karakter kecuali angka
-    const numericOnly = value.replace(/\D/g, "");
-
-    setFormData({
-      ...formData,
-      [name]: numericOnly // simpan sebagai angka murni
-    });
-  } else {
-    setFormData({
-      ...formData,
-      [name]: value
-    });
-  }
-};
+    if (name === "total_masuk" || name === "total_keluar") {
+      // Remove all non-digit characters from the input
+      const numericValue = value.replace(/[^\d]/g, "");
+      
+      // Format with Rp prefix and thousand separators
+      // Use the full string of digits to preserve all zeros
+      const formattedValue = numericValue 
+        ? `Rp ${numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
+        : "";
+      
+      setFormData({
+        ...formData,
+        [name]: formattedValue
+      });
+    } else {
+      setFormData({
+        ...formData,
+        [name]: value
+      });
+    }
+  };
 
   const handleAddNew = () => {
     setFormData({
+      tanggal: getCurrentFormattedDate(),
       jenis: "",
-      jumlah: "",
-      sumber: "",
       deskripsi: "",
-      tanggal: getCurrentFormattedDate() // Set default date to today
+      total_masuk: "",
+      total_keluar: "",
     })
-    setIsEditing(false)
+    setTransactionType("pemasukan") // Default to pemasukan when opening the modal
     setIsAddModalOpen(true)
   }
 
-  const handleEdit = (item) => {
-    // Format the date string to ensure it's in YYYY-MM-DD format for the date input
-    let formattedDate = item.tanggal;
-    
-    // If the date from API isn't in the right format, try to convert it
-    if (item.tanggal && !item.tanggal.match(/^\d{4}-\d{2}-\d{2}$/)) {
-      try {
-        const date = new Date(item.tanggal);
-        if (!isNaN(date.getTime())) {
-          const year = date.getFullYear();
-          const month = String(date.getMonth() + 1).padStart(2, '0');
-          const day = String(date.getDate()).padStart(2, '0');
-          formattedDate = `${year}-${month}-${day}`;
-        }
-      } catch (e) {
-        console.error("Error formatting date:", e);
-        formattedDate = getCurrentFormattedDate(); // Fallback to current date
-      }
+  const handleTransactionTypeChange = (type) => {
+    setTransactionType(type)
+    // Clear the opposite field when switching types
+    if (type === "pemasukan") {
+      setFormData(prev => ({
+        ...prev,
+        total_keluar: "",
+        jenis: "" // Reset jenis when switching types
+      }))
+    } else {
+      setFormData(prev => ({
+        ...prev,
+        total_masuk: "",
+        jenis: "" // Reset jenis when switching types
+      }))
     }
-
-    setFormData({
-      ...item,
-      tanggal: formattedDate,
-      // Ensure jumlah is formatted appropriately if it's already in currency format
-      jumlah: item.jumlah.toString().startsWith('Rp') ? item.jumlah : formatCurrency(item.jumlah)
-    })
-    setIsEditing(true)
-    setIsAddModalOpen(true)
-  }
-
-  const handleDeleteClick = (item) => {
-    setSelectedItem(item)
-    setIsDeleteModalOpen(true)
   }
 
   const handleFormSubmit = async () => {
     // Validate form data
-    if (!formData.jenis || !formData.jumlah || !formData.sumber || !formData.tanggal) {
-      toast({
-        title: "Error",
-        description: "Semua kolom wajib diisi kecuali deskripsi",
-        variant: "destructive",
-      });
+    if (!formData.tanggal || !formData.jenis) {
+      toast.error("Tanggal dan jenis wajib diisi");
+      return;
+    }
+
+    // Check if the appropriate amount field is filled based on transaction type
+    if (transactionType === "pemasukan" && (!formData.total_masuk || formData.total_masuk === "Rp 0")) {
+      toast.error("Total masuk harus diisi");
+      return;
+    }
+    
+    if (transactionType === "pengeluaran" && (!formData.total_keluar || formData.total_keluar === "Rp 0")) {
+      toast.error("Total keluar harus diisi");
       return;
     }
 
     try {
-      if (isEditing) {
-        const success = await updateData(formData.id, formData);
-        if (success) {
-          await fetchData();
-          setIsAddModalOpen(false);
-        }
-      } else {
-        const success = await createData(formData);
-        if (success) {
-          await fetchData();
-          setIsAddModalOpen(false);
-        }
+      const success = await createData(formData);
+      if (success) {
+        await fetchData();
+        setIsAddModalOpen(false);
       }
     } catch (error) {
       console.error("Gagal submit form:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat menyimpan data",
-        variant: "destructive",
-      });
-    }
-  }
-
-  const handleDelete = async () => {
-    try {
-      const success = await deleteData(selectedItem.id);
-      if (success) {
-        await fetchData();
-        setIsDeleteModalOpen(false);
-      }
-    } catch (error) {
-      console.error("Gagal menghapus data:", error);
-      toast({
-        title: "Error",
-        description: "Terjadi kesalahan saat menghapus data",
-        variant: "destructive",
-      });
+      toast.error("Terjadi kesalahan saat menyimpan data");
     }
   }
 
@@ -423,12 +298,6 @@ export default function Page() {
     setDetailItem(item)
     setIsDetailModalOpen(true)
   }
-
-  // Format angka fe
- const formatCurrency = (amount) => {
-  if (!amount) return "Rp 0";
-  return `Rp ${Number(amount).toLocaleString("id-ID")}`;
-}
 
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
@@ -461,7 +330,73 @@ export default function Page() {
         </header>
 
         {/* Konten Dashboard */}
+        
         <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2 px-4">
+      {/* Saldo Dompet Card (kompak) */}
+      <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-blue-500 p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Saldo Dompet</p>
+            <h3 className="text-lg font-bold text-blue-600">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                formatCurrency(
+                  data.reduce((total, item) => 
+                    total + ((item.total_masuk || 0) - (item.total_keluar || 0)), 0
+                ))
+              )}
+            </h3>
+          </div>
+          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+            <Wallet className="h-4 w-4 text-blue-600" />
+          </div>
+        </div>
+      </div>
+      
+      {/* Dana Masuk Card (kompak) */}
+      <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-green-500 p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Dana Masuk</p>
+            <h3 className="text-lg font-bold text-green-600">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                formatCurrency(
+                  data.reduce((total, item) => total + (item.total_masuk || 0), 0)
+                )
+              )}
+            </h3>
+          </div>
+          <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+            <TrendingUp className="h-4 w-4 text-green-600" />
+          </div>
+        </div>
+      </div>
+      
+      {/* Dana Keluar Card (kompak) */}
+      <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-red-500 p-3">
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-xs font-medium text-gray-500">Dana Keluar</p>
+            <h3 className="text-lg font-bold text-red-600">
+              {isLoading ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : (
+                formatCurrency(
+                  data.reduce((total, item) => total + (item.total_keluar || 0), 0)
+                )
+              )}
+            </h3>
+          </div>
+          <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
+            <TrendingDown className="h-4 w-4 text-red-600" />
+          </div>
+        </div>
+      </div>
+    </div>
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-3">
@@ -494,11 +429,12 @@ export default function Page() {
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-gray-50 hover:bg-gray-50">
-                        <TableHead className="w-12 font-medium">ID</TableHead>
+                        {/* <TableHead className="w-12 font-medium">ID</TableHead> */}
                         <TableHead className="font-medium">Tanggal</TableHead>
                         <TableHead className="font-medium">Jenis</TableHead>
-                        <TableHead className="font-medium">Jumlah</TableHead>
-                        <TableHead className="font-medium">Sumber</TableHead>
+                        <TableHead className="font-medium">Total Masuk</TableHead>
+                        <TableHead className="font-medium">Total Keluar</TableHead>
+                        <TableHead className="font-medium">Dompet</TableHead>
                         <TableHead className="font-medium">Deskripsi</TableHead>
                         <TableHead className="text-right font-medium">Aksi</TableHead>
                       </TableRow>
@@ -506,7 +442,7 @@ export default function Page() {
                     <TableBody>
                       {isLoading ? (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-6">
+                          <TableCell colSpan={8} className="text-center py-6">
                             <div className="flex justify-center">
                               <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-primary"></div>
                             </div>
@@ -515,7 +451,7 @@ export default function Page() {
                       ) : currentItems.length > 0 ? (
                         currentItems.map((item) => (
                           <TableRow key={item.id} className="hover:bg-gray-50">
-                            <TableCell className="font-medium">{item.id}</TableCell>
+                            {/* <TableCell className="font-medium">{item.id}</TableCell> */}
                             <TableCell>
                               <div className="flex items-center gap-2">
                                 <Calendar className="h-4 w-4 text-gray-500" />
@@ -523,27 +459,21 @@ export default function Page() {
                               </div>
                             </TableCell>
                             <TableCell>
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                item.jenis === "pemasukan"
-                                  ? "bg-green-100 text-green-800"
-                                  : "bg-red-100 text-red-800"
-                              }`}
-                            >
-                              {item.jenis === "pemasukan" ? (
-                                <ArrowUpCircle className="h-3 w-3 mr-1" />
-                              ) : (
-                                <ArrowDownCircle className="h-3 w-3 mr-1" />
-                              )}
-                              {item.jenis.charAt(0).toUpperCase() + item.jenis.slice(1)}
-                            </span>
+                              <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                                {item.jenis}
+                              </span>
                             </TableCell>
-                            <TableCell className={item.jenis === "pemasukan" ? "text-green-600 font-medium" : "text-red-600 font-medium"}>
-                              {formatCurrency(item.jumlah)}
+                            <TableCell className="text-green-600 font-medium">
+                              {item.total_masuk > 0 ? formatCurrency(item.total_masuk) : "-"}
                             </TableCell>
-                            <TableCell>{item.sumber}</TableCell>
+                            <TableCell className="text-red-600 font-medium">
+                              {item.total_keluar > 0 ? formatCurrency(item.total_keluar) : "-"}
+                            </TableCell>
+                            <TableCell className="font-medium">
+                              {formatCurrency(item.dompet)}
+                            </TableCell>
                             <TableCell className="max-w-[200px] truncate" title={item.deskripsi}>
-                              {item.deskripsi}
+                              {item.deskripsi || "-"}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -555,29 +485,13 @@ export default function Page() {
                                 >
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-8 p-0"
-                                  onClick={() => handleEdit(item)}
-                                >
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                  onClick={() => handleDeleteClick(item)}
-                                >
-                                  <Trash2 className="h-4 w-4" />
-                                </Button>
                               </div>
                             </TableCell>
                           </TableRow>
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={7} className="text-center py-6 text-gray-500">
+                          <TableCell colSpan={8} className="text-center py-6 text-gray-500">
                             Tidak ada data keuangan
                           </TableCell>
                         </TableRow>
@@ -626,7 +540,7 @@ export default function Page() {
             <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
               <DialogContent>
                 <DialogHeader>
-                  <DialogTitle>Detail</DialogTitle>
+                  <DialogTitle>Detail Keuangan</DialogTitle>
                   <DialogDescription>Informasi lengkap data keuangan.</DialogDescription>
                 </DialogHeader>
                 {detailItem && (
@@ -643,35 +557,32 @@ export default function Page() {
                     <div className="grid grid-cols-3 items-center">
                       <span className="font-semibold">Jenis:</span>
                       <span className="col-span-2">
-                        <span
-                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                            detailItem.jenis === "pemasukan"
-                              ? "bg-green-100 text-green-800"
-                              : "bg-red-100 text-red-800"
-                          }`}
-                        >
-                          {detailItem.jenis === "pemasukan" ? (
-                            <ArrowUpCircle className="h-3 w-3 mr-1" />
-                          ) : (
-                            <ArrowDownCircle className="h-3 w-3 mr-1" />
-                          )}
-                          {detailItem.jenis.charAt(0).toUpperCase() + detailItem.jenis.slice(1)}
+                        <span className="inline-flex items-center rounded-full px-2 py-1 text-xs font-medium bg-blue-100 text-blue-800">
+                          {detailItem.jenis}
                         </span>
                       </span>
                     </div>
                     <div className="grid grid-cols-3 items-center">
-                      <span className="font-semibold">Jumlah:</span>
-                      <span className={`col-span-2 ${detailItem.jenis === "pemasukan" ? "text-green-600 font-medium" : "text-red-600 font-medium"}`}>
-                        {formatCurrency(detailItem.jumlah)}
+                      <span className="font-semibold">Total Masuk:</span>
+                      <span className="col-span-2 text-green-600 font-medium">
+                        {detailItem.total_masuk > 0 ? formatCurrency(detailItem.total_masuk) : "-"}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 items-center">
-                      <span className="font-semibold">Sumber:</span>
-                      <span className="col-span-2">{detailItem.sumber}</span>
+                      <span className="font-semibold">Total Keluar:</span>
+                      <span className="col-span-2 text-red-600 font-medium">
+                        {detailItem.total_keluar > 0 ? formatCurrency(detailItem.total_keluar) : "-"}
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center">
+                      <span className="font-semibold">Dompet:</span>
+                      <span className="col-span-2 font-medium">
+                        {formatCurrency(detailItem.dompet)}
+                      </span>
                     </div>
                     <div className="grid grid-cols-3 items-start">
                       <span className="font-semibold">Deskripsi:</span>
-                      <span className="col-span-2">{detailItem.deskripsi}</span>
+                      <span className="col-span-2">{detailItem.deskripsi || "-"}</span>
                     </div>
                   </div>
                 )}
@@ -681,15 +592,51 @@ export default function Page() {
               </DialogContent>
             </Dialog>
 
-            {/* Add/Edit Modal */}
+            {/* Add Modal with Transaction Type Tabs */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
               <DialogContent className="sm:max-w-md">
                 <DialogHeader>
-                  <DialogTitle>{isEditing ? "Edit Data" : "Tambah Data Baru"}</DialogTitle>
+                  <DialogTitle>Tambah Data Keuangan</DialogTitle>
                   <DialogDescription>
-                    {isEditing ? "Ubah data di bawah ini." : "Isi detail untuk data baru."}
+                    Isi detail untuk menambah data keuangan baru.
                   </DialogDescription>
                 </DialogHeader>
+                
+                {/* Transaction Type Tabs */}
+                <div className="flex justify-center space-x-4 mb-4">
+                  <div 
+                    className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${
+                      transactionType === "pemasukan" ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
+                    }`}
+                    onClick={() => handleTransactionTypeChange("pemasukan")}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      transactionType === "pemasukan" ? "bg-white shadow-sm" : "bg-gray-200"
+                    }`}>
+                      <ArrowUpCircle className={`h-4 w-4 ${
+                        transactionType === "pemasukan" ? "text-blue-600" : "text-gray-500"
+                      }`} />
+                    </div>
+                    <span className="text-sm font-medium">Pemasukan</span>
+                  </div>
+                  
+                  <div 
+                    className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${
+                      transactionType === "pengeluaran" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600"
+                    }`}
+                    onClick={() => handleTransactionTypeChange("pengeluaran")}
+                  >
+                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                      transactionType === "pengeluaran" ? "bg-white shadow-sm" : "bg-gray-200"
+                    }`}>
+                      <ArrowDownCircle className={`h-4 w-4 ${
+                        transactionType === "pengeluaran" ? "text-red-600" : "text-gray-500"
+                      }`} />
+                    </div>
+                    <span className="text-sm font-medium">Pengeluaran</span>
+                  </div>
+                </div>
+                
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="tanggal">Tanggal <span className="text-red-500">*</span></Label>
@@ -697,157 +644,102 @@ export default function Page() {
                       id="tanggal"
                       name="tanggal"
                       type="date"
-                      value={formData.tanggal}
+                      value={formData.tanggal || ""}
                       onChange={handleInputChange}
                       disabled={isLoading}
-                      className={formData.touched?.tanggal && !formData.tanggal ? "border-red-500" : ""}
-                      onBlur={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          touched: {
-                            ...prev.touched,
-                            tanggal: true
-                          }
-                        }))
-                      }}
+                      required
                     />
-                    {formData.touched?.tanggal && !formData.tanggal && (
-                      <p className="text-sm text-red-500 mt-1">Tanggal harus diisi</p>
-                    )}
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="jenis">Jenis <span className="text-red-500">*</span></Label>
                     <select
                       id="jenis"
                       name="jenis"
-                      value={formData.jenis}
+                      value={formData.jenis || ""}
                       onChange={handleInputChange}
-                      className={`flex h-10 w-full rounded-md border ${formData.touched?.jenis && !formData.jenis ? "border-red-500" : "border-input"} bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
                       disabled={isLoading}
-                      onBlur={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          touched: {
-                            ...prev.touched,
-                            jenis: true
-                          }
-                        }))
-                      }}
+                      required
                     >
                       <option value="">Pilih jenis</option>
-                      <option value="pemasukan">Pemasukan</option>
-                      <option value="pengeluaran">Pengeluaran</option>
+                      {transactionType === "pemasukan" ? (
+                        <>
+                          <option value="infaq">Infaq</option>
+                          <option value="sedekah">Sedekah</option>
+                          <option value="donasi">Donasi</option>
+                          <option value="zakat">Zakat</option>
+                          <option value="wakaf">Wakaf</option>
+                          <option value="reservasi">Reservasi</option>
+                        </>
+                      ) : (
+                        <>
+                          <option value="dana kegiatan">Dana Kegiatan</option>
+                        </>
+                      )}
                     </select>
-                    {formData.touched?.jenis && !formData.jenis && (
-                      <p className="text-sm text-red-500 mt-1">Jenis harus dipilih</p>
-                    )}
                   </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="jumlah">Jumlah <span className="text-red-500">*</span></Label>
-                    <Input
-                      id="jumlah"
-                      name="jumlah"
-                      value={
-                        formData.jumlah
-                          ? `Rp ${Number(formData.jumlah).toLocaleString("id-ID")}`
-                          : ""
-                      }
-                      onChange={handleInputChange}
-                      placeholder="Rp 0"
-                      disabled={isLoading}
-                      className={formData.touched?.jumlah && !formData.jumlah ? "border-red-500" : ""}
-                      onBlur={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          touched: {
-                            ...prev.touched,
-                            jumlah: true
-                          }
-                        }))
-                      }}
-                    />
-                    {formData.touched?.jumlah && !formData.jumlah && (
-                      <p className="text-sm text-red-500 mt-1">Jumlah harus diisi</p>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="sumber">Sumber <span className="text-red-500">*</span></Label>
-                    <select
-                      id="sumber"
-                      name="sumber"
-                      value={formData.sumber}
-                      onChange={handleInputChange}
-                      className={`flex h-10 w-full rounded-md border ${formData.touched?.sumber && !formData.sumber ? "border-red-500" : "border-input"} bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2`}
-                      disabled={isLoading}
-                      onBlur={() => {
-                        setFormData(prev => ({
-                          ...prev,
-                          touched: {
-                            ...prev.touched,
-                            sumber: true
-                          }
-                        }))
-                      }}
-                    >
-                      <option value="">Pilih sumber</option>
-                      <option value="infaq">Infaq</option>
-                      <option value="sedekah">Sedekah</option>
-                      <option value="donasi">Donasi</option>
-                      <option value="zakat">Zakat</option>
-                      <option value="wakaf">Wakaf</option>
-                      <option value="kegiatan">Dana Kegiatan</option>
-                      <option value="lainnya">Lainnya</option>
-                    </select>
-                    {formData.touched?.sumber && !formData.sumber && (
-                      <p className="text-sm text-red-500 mt-1">Sumber harus dipilih</p>
-                    )}
-                  </div>
-                  <div className="grid gap-2">
-                    <Label htmlFor="deskripsi">Deskripsi</Label>
-                    <Input
-                      id="deskripsi"
-                      name="deskripsi"
-                      value={formData.deskripsi}
-                      onChange={handleInputChange}
-                      placeholder="Masukkan deskripsi"
-                      disabled={isLoading}
-                    />
-                  </div>
+                  
+                  {/* Show only the relevant input field based on transaction type */}
+                  {transactionType === "pemasukan" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="total_masuk">Pemasukan <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="total_masuk"
+                        name="total_masuk"
+                        value={formData.total_masuk || ""}
+                        onChange={handleInputChange}
+                        placeholder="Rp 0"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                  
+                  {transactionType === "pengeluaran" && (
+                    <div className="grid gap-2">
+                      <Label htmlFor="total_keluar">Pengeluaran <span className="text-red-500">*</span></Label>
+                      <Input
+                        id="total_keluar"
+                        name="total_keluar"
+                        value={formData.total_keluar || ""}
+                        onChange={handleInputChange}
+                        placeholder="Rp 0"
+                        disabled={isLoading}
+                      />
+                    </div>
+                  )}
+                  
+                    <div className="grid gap-2">
+                      <Label htmlFor="deskripsi">Deskripsi</Label>
+                      <textarea
+                        id="deskripsi"
+                        name="deskripsi"
+                        value={formData.deskripsi}
+                        onChange={handleInputChange}
+                        placeholder="Masukkan deskripsi"
+                        className="min-h-[120px] flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      />
+                    </div>
                 </div>
                 <DialogFooter>
                   <Button variant="outline" onClick={() => setIsAddModalOpen(false)} disabled={isLoading}>Batal</Button>
-                  <Button onClick={handleFormSubmit} disabled={isLoading || !formData.tanggal || !formData.jenis || !formData.jumlah || !formData.sumber}>
+                  <Button 
+                    onClick={handleFormSubmit} 
+                    disabled={isLoading || !formData.tanggal || !formData.jenis || 
+                      (transactionType === "pemasukan" && (!formData.total_masuk || formData.total_masuk === "Rp 0")) || 
+                      (transactionType === "pengeluaran" && (!formData.total_keluar || formData.total_keluar === "Rp 0"))}
+                  >
                     {isLoading ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {isEditing ? "Menyimpan..." : "Menambahkan..."}
+                        Menambahkan...
                       </>
                     ) : (
-                      isEditing ? "Simpan Perubahan" : "Tambah Data"
+                      "Tambah Data"
                     )}
                   </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
-
-            {/* Delete Confirmation Modal */}
-            <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-              <AlertDialogContent>
-                <AlertDialogHeader>
-                  <AlertDialogTitle>Yakin ingin menghapus?</AlertDialogTitle>
-                  <AlertDialogDescription>
-                    Tindakan ini tidak dapat dibatalkan. Penghapusan akan menghilangkan data keuangan
-                    {selectedItem && ` dengan ID: ${selectedItem.id}`} secara permanen.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <AlertDialogFooter>
-                  <AlertDialogCancel>Batal</AlertDialogCancel>
-                  <AlertDialogAction onClick={handleDelete} className="bg-red-500 hover:bg-red-600">
-                    Hapus
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
           </div>
         </main>
       </SidebarInset>
