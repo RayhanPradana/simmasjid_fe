@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect } from "react";
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -8,14 +8,14 @@ import {
   BreadcrumbList,
   BreadcrumbPage,
   BreadcrumbSeparator,
-} from "@/components/ui/breadcrumb"
-import { Separator } from "@/components/ui/separator"
+} from "@/components/ui/breadcrumb";
+import { Separator } from "@/components/ui/separator";
 import {
   SidebarInset,
   SidebarProvider,
   SidebarTrigger,
-} from "@/components/ui/sidebar"
-import { AppSidebar } from "@/components/app-sidebar"
+} from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-sidebar";
 import {
   ArrowDownCircle,
   ArrowUpCircle,
@@ -24,10 +24,10 @@ import {
   Plus,
   Calendar,
   Loader2,
-} from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
+} from "@/components/ui/dialog";
 import {
   Card,
   CardContent,
@@ -43,7 +43,7 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   Table,
   TableBody,
@@ -51,77 +51,150 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 import toast from "react-hot-toast";
-import { TrendingDown, TrendingUp, Wallet } from "lucide-react"
-
+import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { handleCetak } from "@/components/handleCetak";
 
 export default function Page() {
-  const API_BASE_URL = "http://127.0.0.1:8000/api/keuangan"
+  const API_BASE_URL = "http://127.0.0.1:8000/api/keuangan";
 
-  const [data, setData] = useState([])
-  const [filteredData, setFilteredData] = useState([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
-  const [detailItem, setDetailItem] = useState(null)
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false)
+  const [data, setData] = useState([]);
+  const [filteredData, setFilteredData] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [filterType, setFilterType] = useState("all");
+  const [filterDate, setFilterDate] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [isLoading, setIsLoading] = useState(false);
+  const [transactionType, setTransactionType] = useState("pemasukan");
+  const itemsPerPage = 5;
+  const indexOfLastItem = currentPage * itemsPerPage;
+  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
+  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
+  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+
+  const filterActive = ["mingguan", "bulanan", "tahunan"].includes(filterType);
+
+  //const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
     tanggal: getCurrentFormattedDate(),
     jenis: "",
     deskripsi: "",
     total_masuk: "",
     total_keluar: "",
-  })
-  const [currentPage, setCurrentPage] = useState(1)
-  const [isLoading, setIsLoading] = useState(false)
-  const [transactionType, setTransactionType] = useState("pemasukan")
-  const itemsPerPage = 5
+  });
 
-  // Format current date to YYYY-MM-DD for default value
   function getCurrentFormattedDate() {
     const now = new Date();
     const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, '0');
-    const day = String(now.getDate()).padStart(2, '0');
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const day = String(now.getDate()).padStart(2, "0");
     return `${year}-${month}-${day}`;
   }
 
   // Format currency with preserved zeros
   function formatCurrency(amount) {
-    // Check if amount is null, undefined, or empty string
     if (amount === null || amount === undefined || amount === "") return "Rp 0";
-    
-    // If the amount is already a formatted string starting with "Rp", return it
-    if (typeof amount === 'string' && amount.startsWith('Rp ')) return amount;
-    
+
+    if (typeof amount === "string" && amount.startsWith("Rp ")) return amount;
+
     // Parse amount to number
     const numAmount = Number(amount);
-    
-    // Format with thousands separator while preserving zeros
-    // Format to always show trailing zeros
+
     return `Rp ${numAmount.toLocaleString("id-ID", {
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     })}`;
   }
 
   // Fetch data on component mount
   useEffect(() => {
-    fetchData()
-  }, [])
+    fetchData();
+  }, []);
 
   // Filter data based on search term
   useEffect(() => {
-    const filtered = data.filter(item => 
-      item.jenis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      item.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (item.total_masuk && item.total_masuk.toString().includes(searchTerm)) ||
-      (item.total_keluar && item.total_keluar.toString().includes(searchTerm)) ||
-      item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    setFilteredData(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, data])
+    const filtered = data.filter(
+      (item) =>
+        item.jenis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (item.total_masuk &&
+          item.total_masuk.toString().includes(searchTerm)) ||
+        (item.total_keluar &&
+          item.total_keluar.toString().includes(searchTerm)) ||
+        item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredData(filtered);
+    setCurrentPage(1);
+  }, [searchTerm, data]);
+
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        setIsLoading(true);
+        const token = localStorage.getItem("token");
+
+        let url = "http://localhost:8000/api/keuangan-laporan";
+        const params = [];
+
+        if (filterType !== "all") {
+          params.push(`filterType=${filterType}`);
+          if (filterDate) {
+            params.push(`filterDate=${filterDate}`);
+          }
+        }
+
+        if (params.length) {
+          url += `?${params.join("&")}`;
+        }
+
+        const response = await fetch(url, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! Status: ${response.status}`);
+        }
+
+        const json = await response.json();
+        setData(json.data);
+      } catch (error) {
+        console.error("Error fetching data:", error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchData();
+  }, [filterType, filterDate]);
+
+  let runningSaldo = 0;
+
+  const sortedCurrentItems = filterActive
+    ? [...currentItems].sort((a, b) => a.id - b.id)
+    : currentItems;
+
+  const computedItems = sortedCurrentItems.map((item) => {
+    const masuk = item.total_masuk || 0;
+    const keluar = item.total_keluar || 0;
+
+    if (filterActive) {
+      runningSaldo += masuk - keluar;
+      return {
+        ...item,
+        dompet: runningSaldo,
+      };
+    } else {
+      return item;
+    }
+  });
 
   // READ - Fetch all Data from API
   const fetchData = async () => {
@@ -132,12 +205,12 @@ export default function Page() {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      if (!response.ok) {  
+      if (!response.ok) {
         throw new Error("Network response was not ok");
       }
       const result = await response.json();
@@ -146,68 +219,62 @@ export default function Page() {
     } catch (error) {
       console.error("Gagal memuat data:", error);
       toast.error("Gagal memuat data. Silakan coba lagi.");
-    }
-    finally {
+    } finally {
       setIsLoading(false);
     }
   };
 
   // CREATE - Tambah data baru
-const createData = async (formData) => {
-  setIsLoading(true)
-  try {
-    // Extract numeric values from formatted currency strings
-    let totalMasuk = 0;
-    let totalKeluar = 0;
-    
-    if (transactionType === "pemasukan" && formData.total_masuk) {
-      // Extract only numeric values from the formatted string (e.g., "Rp 1.000.000" -> 1000000)
-      // Replace all dots (thousand separators) and "Rp " prefix before parsing
-      totalMasuk = parseInt(formData.total_masuk.replace(/[^\d]/g, ''), 10);
-    }
-    
-    if (transactionType === "pengeluaran" && formData.total_keluar) {
-      // Extract only numeric values from the formatted string
-      totalKeluar = parseInt(formData.total_keluar.replace(/[^\d]/g, ''), 10);
-    }
-    
-    // Ensure data matches the database structure
-    const sanitizedData = {
-      tanggal: formData.tanggal,
-      jenis: formData.jenis,
-      deskripsi: formData.deskripsi || null,
-      total_masuk: totalMasuk,
-      total_keluar: totalKeluar
-    };
+  const createData = async (formData) => {
+    setIsLoading(true);
+    try {
+      let totalMasuk = 0;
+      let totalKeluar = 0;
 
-    const token = localStorage.getItem("token");
-    const response = await fetch(`${API_BASE_URL}`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Accept": "application/json",
-        "Authorization": `Bearer ${token}`,
-      },
-      body: JSON.stringify(sanitizedData),
-    })
+      if (transactionType === "pemasukan" && formData.total_masuk) {
+        totalMasuk = parseInt(formData.total_masuk.replace(/[^\d]/g, ""), 10);
+      }
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      console.error("API Error:", errorData);
-      toast.error("Gagal menambahkan data. " + (errorData.message || ""));
+      if (transactionType === "pengeluaran" && formData.total_keluar) {
+        totalKeluar = parseInt(formData.total_keluar.replace(/[^\d]/g, ""), 10);
+      }
+
+      const sanitizedData = {
+        tanggal: formData.tanggal,
+        jenis: formData.jenis,
+        deskripsi: formData.deskripsi || null,
+        total_masuk: totalMasuk,
+        total_keluar: totalKeluar,
+      };
+
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${API_BASE_URL}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(sanitizedData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("API Error:", errorData);
+        toast.error("Gagal menambahkan data. " + (errorData.message || ""));
+        return false;
+      }
+      toast.success("Data keuangan berhasil ditambahkan.");
+
+      return true;
+    } catch (error) {
+      console.error("Error saat menambah data:", error);
+      toast.error("Terjadi kesalahan saat menambahkan data");
       return false;
+    } finally {
+      setIsLoading(false);
     }
-    toast.success("Data keuangan berhasil ditambahkan.");
-    
-    return true;
-  } catch (error) {
-    console.error("Error saat menambah data:", error);
-    toast.error("Terjadi kesalahan saat menambahkan data");
-    return false;
-  } finally {
-    setIsLoading(false)
-  }
-}
+  };
 
   const handleInputChange = (e) => {
     const { name, value } = e.target;
@@ -215,21 +282,18 @@ const createData = async (formData) => {
     if (name === "total_masuk" || name === "total_keluar") {
       // Remove all non-digit characters from the input
       const numericValue = value.replace(/[^\d]/g, "");
-      
-      // Format with Rp prefix and thousand separators
-      // Use the full string of digits to preserve all zeros
-      const formattedValue = numericValue 
+      const formattedValue = numericValue
         ? `Rp ${numericValue.replace(/\B(?=(\d{3})+(?!\d))/g, ".")}`
         : "";
-      
+
       setFormData({
         ...formData,
-        [name]: formattedValue
+        [name]: formattedValue,
       });
     } else {
       setFormData({
         ...formData,
-        [name]: value
+        [name]: value,
       });
     }
   };
@@ -241,28 +305,28 @@ const createData = async (formData) => {
       deskripsi: "",
       total_masuk: "",
       total_keluar: "",
-    })
-    setTransactionType("pemasukan") // Default to pemasukan when opening the modal
-    setIsAddModalOpen(true)
-  }
+    });
+    setTransactionType("pemasukan"); // Default to pemasukan when opening the modal
+    setIsAddModalOpen(true);
+  };
 
   const handleTransactionTypeChange = (type) => {
-    setTransactionType(type)
+    setTransactionType(type);
     // Clear the opposite field when switching types
     if (type === "pemasukan") {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         total_keluar: "",
-        jenis: "" // Reset jenis when switching types
-      }))
+        jenis: "", // Reset jenis when switching types
+      }));
     } else {
-      setFormData(prev => ({
+      setFormData((prev) => ({
         ...prev,
         total_masuk: "",
-        jenis: "" // Reset jenis when switching types
-      }))
+        jenis: "", // Reset jenis when switching types
+      }));
     }
-  }
+  };
 
   const handleFormSubmit = async () => {
     // Validate form data
@@ -272,12 +336,18 @@ const createData = async (formData) => {
     }
 
     // Check if the appropriate amount field is filled based on transaction type
-    if (transactionType === "pemasukan" && (!formData.total_masuk || formData.total_masuk === "Rp 0")) {
+    if (
+      transactionType === "pemasukan" &&
+      (!formData.total_masuk || formData.total_masuk === "Rp 0")
+    ) {
       toast.error("Total masuk harus diisi");
       return;
     }
-    
-    if (transactionType === "pengeluaran" && (!formData.total_keluar || formData.total_keluar === "Rp 0")) {
+
+    if (
+      transactionType === "pengeluaran" &&
+      (!formData.total_keluar || formData.total_keluar === "Rp 0")
+    ) {
       toast.error("Total keluar harus diisi");
       return;
     }
@@ -292,17 +362,12 @@ const createData = async (formData) => {
       console.error("Gagal submit form:", error);
       toast.error("Terjadi kesalahan saat menyimpan data");
     }
-  }
+  };
 
   const handleDetails = (item) => {
-    setDetailItem(item)
-    setIsDetailModalOpen(true)
-  }
-
-  const indexOfLastItem = currentPage * itemsPerPage;
-  const indexOfFirstItem = indexOfLastItem - itemsPerPage;
-  const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem);
-  const totalPages = Math.ceil(filteredData.length / itemsPerPage);
+    setDetailItem(item);
+    setIsDetailModalOpen(true);
+  };
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -330,73 +395,90 @@ const createData = async (formData) => {
         </header>
 
         {/* Konten Dashboard */}
-        
+
         <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
           <div className="grid grid-cols-1 md:grid-cols-3 gap-2 mb-2 px-4">
-      {/* Saldo Dompet Card (kompak) */}
-      <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-blue-500 p-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500">Saldo Dompet</p>
-            <h3 className="text-lg font-bold text-blue-600">
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                formatCurrency(
-                  data.reduce((total, item) => 
-                    total + ((item.total_masuk || 0) - (item.total_keluar || 0)), 0
-                ))
-              )}
-            </h3>
+            {/* Saldo Dompet Card (kompak) */}
+            <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-blue-500 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500">
+                    Saldo Dompet
+                  </p>
+                  <h3 className="text-lg font-bold text-blue-600">
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      formatCurrency(
+                        data.reduce(
+                          (total, item) =>
+                            total +
+                            ((item.total_masuk || 0) -
+                              (item.total_keluar || 0)),
+                          0
+                        )
+                      )
+                    )}
+                  </h3>
+                </div>
+                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
+                  <Wallet className="h-4 w-4 text-blue-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Dana Masuk Card (kompak) */}
+            <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-green-500 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500">
+                    Dana Masuk
+                  </p>
+                  <h3 className="text-lg font-bold text-green-600">
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      formatCurrency(
+                        data.reduce(
+                          (total, item) => total + (item.total_masuk || 0),
+                          0
+                        )
+                      )
+                    )}
+                  </h3>
+                </div>
+                <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
+                  <TrendingUp className="h-4 w-4 text-green-600" />
+                </div>
+              </div>
+            </div>
+
+            {/* Dana Keluar Card (kompak) */}
+            <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-red-500 p-3">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-500">
+                    Dana Keluar
+                  </p>
+                  <h3 className="text-lg font-bold text-red-600">
+                    {isLoading ? (
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                    ) : (
+                      formatCurrency(
+                        data.reduce(
+                          (total, item) => total + (item.total_keluar || 0),
+                          0
+                        )
+                      )
+                    )}
+                  </h3>
+                </div>
+                <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
+                  <TrendingDown className="h-4 w-4 text-red-600" />
+                </div>
+              </div>
+            </div>
           </div>
-          <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-            <Wallet className="h-4 w-4 text-blue-600" />
-          </div>
-        </div>
-      </div>
-      
-      {/* Dana Masuk Card (kompak) */}
-      <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-green-500 p-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500">Dana Masuk</p>
-            <h3 className="text-lg font-bold text-green-600">
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                formatCurrency(
-                  data.reduce((total, item) => total + (item.total_masuk || 0), 0)
-                )
-              )}
-            </h3>
-          </div>
-          <div className="h-8 w-8 bg-green-100 rounded-full flex items-center justify-center">
-            <TrendingUp className="h-4 w-4 text-green-600" />
-          </div>
-        </div>
-      </div>
-      
-      {/* Dana Keluar Card (kompak) */}
-      <div className="bg-white shadow-sm rounded-lg border-l-4 border-l-red-500 p-3">
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-xs font-medium text-gray-500">Dana Keluar</p>
-            <h3 className="text-lg font-bold text-red-600">
-              {isLoading ? (
-                <Loader2 className="h-4 w-4 animate-spin" />
-              ) : (
-                formatCurrency(
-                  data.reduce((total, item) => total + (item.total_keluar || 0), 0)
-                )
-              )}
-            </h3>
-          </div>
-          <div className="h-8 w-8 bg-red-100 rounded-full flex items-center justify-center">
-            <TrendingDown className="h-4 w-4 text-red-600" />
-          </div>
-        </div>
-      </div>
-    </div>
           <div className="space-y-6">
             <Card>
               <CardHeader className="pb-3">
@@ -405,12 +487,66 @@ const createData = async (formData) => {
                     <CardTitle>Keuangan</CardTitle>
                     <CardDescription>Kelola data keuangan</CardDescription>
                   </div>
-                  <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
+                  <Button
+                    onClick={handleAddNew}
+                    size="sm"
+                    className="flex items-center gap-1"
+                  >
                     <Plus className="h-4 w-4" /> Tambah Data
                   </Button>
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Filter tanggal */}
+                <div className="flex items-center gap-4 mb-4">
+                  <div>
+                    <select
+                      className="border border-gray-300 rounded-md px-3 py-2 text-sm"
+                      value={filterType}
+                      onChange={(e) => {
+                        setFilterType(e.target.value);
+                        setFilterDate("");
+                      }}
+                    >
+                      <option value="semua">Semua</option>
+                      <option value="mingguan">Perminggu</option>
+                      <option value="bulanan">Perbulan</option>
+                      <option value="tahunan">Pertahun</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    {filterType === "tahunan" ? (
+                      <Input
+                        type="number"
+                        placeholder="Contoh: 2025"
+                        className="text-sm"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                      />
+                    ) : filterType !== "all" ? (
+                      <Input
+                        type="date"
+                        className="text-sm"
+                        value={filterDate}
+                        onChange={(e) => setFilterDate(e.target.value)}
+                      />
+                    ) : null}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-4 mb-4">
+                  {filterType !== "semua" && filterDate !== "" && (
+                    <Button
+                      className="bg-purple-600 hover:bg-purple-700 text-white"
+                      onClick={() => handleCetak(filterType, filterDate)}
+                      disabled={filterType === "semua" || filterDate === ""}
+                    >
+                      Cetak PDF
+                    </Button>
+                  )}
+                </div>
+
                 {/* Pencarian */}
                 <div className="flex items-center mb-4">
                   <div className="relative flex-1">
@@ -432,11 +568,17 @@ const createData = async (formData) => {
                         {/* <TableHead className="w-12 font-medium">ID</TableHead> */}
                         <TableHead className="font-medium">Tanggal</TableHead>
                         <TableHead className="font-medium">Jenis</TableHead>
-                        <TableHead className="font-medium">Total Masuk</TableHead>
-                        <TableHead className="font-medium">Total Keluar</TableHead>
+                        <TableHead className="font-medium">
+                          Total Masuk
+                        </TableHead>
+                        <TableHead className="font-medium">
+                          Total Keluar
+                        </TableHead>
                         <TableHead className="font-medium">Dompet</TableHead>
                         <TableHead className="font-medium">Deskripsi</TableHead>
-                        <TableHead className="text-right font-medium">Aksi</TableHead>
+                        <TableHead className="text-right font-medium">
+                          Aksi
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -448,8 +590,8 @@ const createData = async (formData) => {
                             </div>
                           </TableCell>
                         </TableRow>
-                      ) : currentItems.length > 0 ? (
-                        currentItems.map((item) => (
+                      ) : computedItems.length > 0 ? (
+                        computedItems.map((item) => (
                           <TableRow key={item.id} className="hover:bg-gray-50">
                             {/* <TableCell className="font-medium">{item.id}</TableCell> */}
                             <TableCell>
@@ -464,15 +606,22 @@ const createData = async (formData) => {
                               </span>
                             </TableCell>
                             <TableCell className="text-green-600 font-medium">
-                              {item.total_masuk > 0 ? formatCurrency(item.total_masuk) : "-"}
+                              {item.total_masuk > 0
+                                ? formatCurrency(item.total_masuk)
+                                : "-"}
                             </TableCell>
                             <TableCell className="text-red-600 font-medium">
-                              {item.total_keluar > 0 ? formatCurrency(item.total_keluar) : "-"}
+                              {item.total_keluar > 0
+                                ? formatCurrency(item.total_keluar)
+                                : "-"}
                             </TableCell>
                             <TableCell className="font-medium">
                               {formatCurrency(item.dompet)}
                             </TableCell>
-                            <TableCell className="max-w-[200px] truncate" title={item.deskripsi}>
+                            <TableCell
+                              className="max-w-[200px] truncate"
+                              title={item.deskripsi}
+                            >
                               {item.deskripsi || "-"}
                             </TableCell>
                             <TableCell className="text-right">
@@ -491,7 +640,10 @@ const createData = async (formData) => {
                         ))
                       ) : (
                         <TableRow>
-                          <TableCell colSpan={8} className="text-center py-6 text-gray-500">
+                          <TableCell
+                            colSpan={8}
+                            className="text-center py-6 text-gray-500"
+                          >
                             Tidak ada data keuangan
                           </TableCell>
                         </TableRow>
@@ -507,7 +659,9 @@ const createData = async (formData) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => paginate(currentPage > 1 ? currentPage - 1 : 1)}
+                      onClick={() =>
+                        paginate(currentPage > 1 ? currentPage - 1 : 1)
+                      }
                       disabled={currentPage === 1}
                     >
                       Previous
@@ -526,7 +680,13 @@ const createData = async (formData) => {
                     <Button
                       variant="outline"
                       size="sm"
-                      onClick={() => paginate(currentPage < totalPages ? currentPage + 1 : totalPages)}
+                      onClick={() =>
+                        paginate(
+                          currentPage < totalPages
+                            ? currentPage + 1
+                            : totalPages
+                        )
+                      }
                       disabled={currentPage === totalPages}
                     >
                       Next
@@ -537,11 +697,16 @@ const createData = async (formData) => {
             </Card>
 
             {/* Dialog Detail Keuangan */}
-            <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+            <Dialog
+              open={isDetailModalOpen}
+              onOpenChange={setIsDetailModalOpen}
+            >
               <DialogContent>
                 <DialogHeader>
                   <DialogTitle>Detail Keuangan</DialogTitle>
-                  <DialogDescription>Informasi lengkap data keuangan.</DialogDescription>
+                  <DialogDescription>
+                    Informasi lengkap data keuangan.
+                  </DialogDescription>
                 </DialogHeader>
                 {detailItem && (
                   <div className="grid gap-3 text-sm py-2">
@@ -565,13 +730,17 @@ const createData = async (formData) => {
                     <div className="grid grid-cols-3 items-center">
                       <span className="font-semibold">Total Masuk:</span>
                       <span className="col-span-2 text-green-600 font-medium">
-                        {detailItem.total_masuk > 0 ? formatCurrency(detailItem.total_masuk) : "-"}
+                        {detailItem.total_masuk > 0
+                          ? formatCurrency(detailItem.total_masuk)
+                          : "-"}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 items-center">
                       <span className="font-semibold">Total Keluar:</span>
                       <span className="col-span-2 text-red-600 font-medium">
-                        {detailItem.total_keluar > 0 ? formatCurrency(detailItem.total_keluar) : "-"}
+                        {detailItem.total_keluar > 0
+                          ? formatCurrency(detailItem.total_keluar)
+                          : "-"}
                       </span>
                     </div>
                     <div className="grid grid-cols-3 items-center">
@@ -582,12 +751,19 @@ const createData = async (formData) => {
                     </div>
                     <div className="grid grid-cols-3 items-start">
                       <span className="font-semibold">Deskripsi:</span>
-                      <span className="col-span-2">{detailItem.deskripsi || "-"}</span>
+                      <span className="col-span-2">
+                        {detailItem.deskripsi || "-"}
+                      </span>
                     </div>
                   </div>
                 )}
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>Tutup</Button>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDetailModalOpen(false)}
+                  >
+                    Tutup
+                  </Button>
                 </DialogFooter>
               </DialogContent>
             </Dialog>
@@ -601,45 +777,67 @@ const createData = async (formData) => {
                     Isi detail untuk menambah data keuangan baru.
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 {/* Transaction Type Tabs */}
                 <div className="flex justify-center space-x-4 mb-4">
-                  <div 
+                  <div
                     className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${
-                      transactionType === "pemasukan" ? "bg-blue-100 text-blue-600" : "bg-gray-100 text-gray-600"
+                      transactionType === "pemasukan"
+                        ? "bg-blue-100 text-blue-600"
+                        : "bg-gray-100 text-gray-600"
                     }`}
                     onClick={() => handleTransactionTypeChange("pemasukan")}
                   >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      transactionType === "pemasukan" ? "bg-white shadow-sm" : "bg-gray-200"
-                    }`}>
-                      <ArrowUpCircle className={`h-4 w-4 ${
-                        transactionType === "pemasukan" ? "text-blue-600" : "text-gray-500"
-                      }`} />
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        transactionType === "pemasukan"
+                          ? "bg-white shadow-sm"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      <ArrowUpCircle
+                        className={`h-4 w-4 ${
+                          transactionType === "pemasukan"
+                            ? "text-blue-600"
+                            : "text-gray-500"
+                        }`}
+                      />
                     </div>
                     <span className="text-sm font-medium">Pemasukan</span>
                   </div>
-                  
-                  <div 
+
+                  <div
                     className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${
-                      transactionType === "pengeluaran" ? "bg-red-100 text-red-600" : "bg-gray-100 text-gray-600"
+                      transactionType === "pengeluaran"
+                        ? "bg-red-100 text-red-600"
+                        : "bg-gray-100 text-gray-600"
                     }`}
                     onClick={() => handleTransactionTypeChange("pengeluaran")}
                   >
-                    <div className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                      transactionType === "pengeluaran" ? "bg-white shadow-sm" : "bg-gray-200"
-                    }`}>
-                      <ArrowDownCircle className={`h-4 w-4 ${
-                        transactionType === "pengeluaran" ? "text-red-600" : "text-gray-500"
-                      }`} />
+                    <div
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                        transactionType === "pengeluaran"
+                          ? "bg-white shadow-sm"
+                          : "bg-gray-200"
+                      }`}
+                    >
+                      <ArrowDownCircle
+                        className={`h-4 w-4 ${
+                          transactionType === "pengeluaran"
+                            ? "text-red-600"
+                            : "text-gray-500"
+                        }`}
+                      />
                     </div>
                     <span className="text-sm font-medium">Pengeluaran</span>
                   </div>
                 </div>
-                
+
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="tanggal">Tanggal <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="tanggal">
+                      Tanggal <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="tanggal"
                       name="tanggal"
@@ -651,7 +849,9 @@ const createData = async (formData) => {
                     />
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="jenis">Jenis <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="jenis">
+                      Jenis <span className="text-red-500">*</span>
+                    </Label>
                     <select
                       id="jenis"
                       name="jenis"
@@ -678,11 +878,13 @@ const createData = async (formData) => {
                       )}
                     </select>
                   </div>
-                  
+
                   {/* Show only the relevant input field based on transaction type */}
                   {transactionType === "pemasukan" && (
                     <div className="grid gap-2">
-                      <Label htmlFor="total_masuk">Pemasukan <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="total_masuk">
+                        Pemasukan <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         id="total_masuk"
                         name="total_masuk"
@@ -693,10 +895,12 @@ const createData = async (formData) => {
                       />
                     </div>
                   )}
-                  
+
                   {transactionType === "pengeluaran" && (
                     <div className="grid gap-2">
-                      <Label htmlFor="total_keluar">Pengeluaran <span className="text-red-500">*</span></Label>
+                      <Label htmlFor="total_keluar">
+                        Pengeluaran <span className="text-red-500">*</span>
+                      </Label>
                       <Input
                         id="total_keluar"
                         name="total_keluar"
@@ -707,26 +911,40 @@ const createData = async (formData) => {
                       />
                     </div>
                   )}
-                  
-                    <div className="grid gap-2">
-                      <Label htmlFor="deskripsi">Deskripsi</Label>
-                      <textarea
-                        id="deskripsi"
-                        name="deskripsi"
-                        value={formData.deskripsi}
-                        onChange={handleInputChange}
-                        placeholder="Masukkan deskripsi"
-                        className="min-h-[120px] flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      />
-                    </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="deskripsi">Deskripsi</Label>
+                    <textarea
+                      id="deskripsi"
+                      name="deskripsi"
+                      value={formData.deskripsi}
+                      onChange={handleInputChange}
+                      placeholder="Masukkan deskripsi"
+                      className="min-h-[120px] flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    />
+                  </div>
                 </div>
                 <DialogFooter>
-                  <Button variant="outline" onClick={() => setIsAddModalOpen(false)} disabled={isLoading}>Batal</Button>
-                  <Button 
-                    onClick={handleFormSubmit} 
-                    disabled={isLoading || !formData.tanggal || !formData.jenis || 
-                      (transactionType === "pemasukan" && (!formData.total_masuk || formData.total_masuk === "Rp 0")) || 
-                      (transactionType === "pengeluaran" && (!formData.total_keluar || formData.total_keluar === "Rp 0"))}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddModalOpen(false)}
+                    disabled={isLoading}
+                  >
+                    Batal
+                  </Button>
+                  <Button
+                    onClick={handleFormSubmit}
+                    disabled={
+                      isLoading ||
+                      !formData.tanggal ||
+                      !formData.jenis ||
+                      (transactionType === "pemasukan" &&
+                        (!formData.total_masuk ||
+                          formData.total_masuk === "Rp 0")) ||
+                      (transactionType === "pengeluaran" &&
+                        (!formData.total_keluar ||
+                          formData.total_keluar === "Rp 0"))
+                    }
                   >
                     {isLoading ? (
                       <>
@@ -744,5 +962,5 @@ const createData = async (formData) => {
         </main>
       </SidebarInset>
     </SidebarProvider>
-  )
+  );
 }

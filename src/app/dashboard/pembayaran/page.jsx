@@ -61,9 +61,12 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // API base URLs
-const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
+const API_BASE_URL = "http://127.0.0.1:8000/api/"
+
 
 export default function Page() {
+  const isLoggedIn = useAuthRedirect();
+
   const [payments, setPayments] = useState([])
   const [filteredPayments, setFilteredPayments] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -225,12 +228,11 @@ export default function Page() {
     )
   }
 
-  // Fetch all payment data with reservations
-  const fetchPayments = async () => {
-    setIsLoading(true)
-    try {
-      const token = getToken()
-      if (!token) return
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
       const response = await fetch(API_BASE_URL, {
         method: "GET",

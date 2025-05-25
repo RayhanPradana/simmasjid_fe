@@ -43,11 +43,6 @@ const Profile = () => {
     image: "",
   });
 
-  // const nameRef = useRef();
-  // const emailRef = useRef();
-  // const phoneRef = useRef();
-  // const addressRef = useRef();
-
   const [showOldPassword, setShowOldPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
