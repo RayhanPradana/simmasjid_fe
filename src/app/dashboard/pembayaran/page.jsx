@@ -61,7 +61,7 @@ import {
 } from "@/components/ui/alert-dialog"
 
 // API base URLs
-const API_BASE_URL = "http://127.0.0.1:8000/api/"
+const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
 
 
 export default function Page() {
@@ -234,54 +234,57 @@ export default function Page() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-      const response = await fetch(API_BASE_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      })
+        const response = await fetch(API_BASE_URL, {
+          method: "GET",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        })
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast({
-            title: "Sesi berakhir",
-            description: "Sesi login Anda telah berakhir. Silakan login kembali.",
-            variant: "destructive",
-          })
-          return
+        if (!response.ok) {
+          if (response.status === 401) {
+            toast({
+              title: "Sesi berakhir",
+              description: "Sesi login Anda telah berakhir. Silakan login kembali.",
+              variant: "destructive",
+            })
+            return
+          }
+          throw new Error(`HTTP error ${response.status}`)
         }
-        throw new Error(`HTTP error ${response.status}`)
-      }
 
-      const result = await response.json()
-      
-      // The controller returns the data directly as an array
-      let paymentData = []
-      
-      if (Array.isArray(result)) {
-        paymentData = result
-      } else if (result && Array.isArray(result.data)) {
-        paymentData = result.data
+        const result = await response.json()
+        
+        // The controller returns the data directly as an array
+        let paymentData = []
+        
+        if (Array.isArray(result)) {
+          paymentData = result
+        } else if (result && Array.isArray(result.data)) {
+          paymentData = result.data
+        }
+        
+        setPayments(paymentData)
+        filterPaymentsByTab(paymentData, currentTab)
+        
+      } catch (error) {
+        console.error("Failed to fetch payments:", error)
+        toast({
+          title: "Error",
+          description: `Gagal memuat data pembayaran: ${error.message}`,
+          variant: "destructive",
+        })
+        setPayments([])
+        setFilteredPayments([])
+      } finally {
+        setIsLoading(false)
       }
-      
-      setPayments(paymentData)
-      filterPaymentsByTab(paymentData, currentTab)
-      
-    } catch (error) {
-      console.error("Failed to fetch payments:", error)
-      toast({
-        title: "Error",
-        description: `Gagal memuat data pembayaran: ${error.message}`,
-        variant: "destructive",
-      })
-      setPayments([])
-      setFilteredPayments([])
-    } finally {
-      setIsLoading(false)
     }
-  }
+    
+    fetchData();
+  }, [currentTab]);
 
   // Filter payments by tab and search term
   const filterPaymentsByTab = (paymentsData, tabValue) => {

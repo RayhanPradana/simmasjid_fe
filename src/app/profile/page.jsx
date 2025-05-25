@@ -347,7 +347,7 @@ export default function Page() {
                 <DropdownMenuLabel>Akun</DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem
-                  onClick={() => router.push("/landing-page/profile")}
+                  onClick={() => router.push("/profile")}
                 >
                   <User className="mr-2" />
                   Profile
@@ -504,21 +504,28 @@ export default function Page() {
                   </div>
                 </CardContent>
               </Card>
-
-              <div className="text-end">
+              <div className="flex justify-between items-center space-x-2">
                 <Button
-                  variant="outline"
-                  onClick={() => setShowPasswordModal(true)}
-                  className="mr-2"
+                  className="bg-blue-600 hover:bg-blue-700" 
+                  onClick={() => router.push("/")}
                 >
-                  Ubah Password
+                  Kembali ke Beranda
                 </Button>
-                <Button
-                  className="bg-green-600 hover:bg-green-700"
-                  onClick={handleUpdateProfile}
-                >
-                  Simpan Perubahan
-                </Button>
+                <div className="space-x-2">
+                  <Button
+                    variant="outline"
+                    onClick={() => setShowPasswordModal(true)}
+                    className="mr-2"
+                  >
+                    Ubah Password
+                  </Button>
+                  <Button
+                    className="bg-green-600 hover:bg-green-700"
+                    onClick={handleUpdateProfile}
+                  >
+                    Simpan Perubahan
+                  </Button>
+                </div>
               </div>
             </div>
           </main>

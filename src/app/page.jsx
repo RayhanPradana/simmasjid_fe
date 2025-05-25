@@ -381,9 +381,18 @@ export default function Page() {
                 <DropdownMenuContent className="w-56">
                   <DropdownMenuLabel>Akun</DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
-                    <LogOut size={16} className="mr-2" /> Logout
-                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                  onClick={() => router.push("/profile")}
+                >
+                  <User className="mr-2" />
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={handleLogout}
+                  className="cursor-pointer"
+                >
+                  <LogOut size={16} className="mr-2" /> Logout
+                </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
