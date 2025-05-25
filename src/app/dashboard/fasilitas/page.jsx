@@ -236,6 +236,17 @@ export default function Page() {
     }
   };
 
+   // Format currency to IDR
+  const formatCurrency = (amount) => {
+    if (!amount) return 'Rp 0';
+    return new Intl.NumberFormat('id-ID', {
+      style: 'currency',
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
   // Improve error handling in createFacility function
   const createFacility = async (facilityData) => {
     setIsLoading(true)
@@ -579,8 +590,8 @@ export default function Page() {
                 {/* Facilities Table */}
                 <div className="rounded-md border shadow-sm overflow-hidden">
                   {/* Table Header */}
-                  <div className="bg-gray-50 border-b grid grid-cols-12 text-xs font-medium text-gray-500 uppercase">
-                    <div className="px-4 py-3 col-span-1 text-center">ID</div>
+                  <div className="bg-gray-50 border-b grid grid-cols-11 text-xs font-medium text-gray-500 uppercase">
+                    {/* <div className="px-4 py-3 col-span-1 text-center">ID</div> */}
                     <div className="px-4 py-3 col-span-3">Nama Fasilitas</div>
                     <div className="px-4 py-3 col-span-3">Keterangan</div>
                     <div className="px-4 py-3 col-span-2">Harga</div>
@@ -603,9 +614,9 @@ export default function Page() {
                     currentItems.map((item) => (
                       <div
                         key={item.id}
-                        className="grid grid-cols-12 border-b text-sm hover:bg-gray-50 transition-colors"
+                        className="grid grid-cols-11 border-b text-sm hover:bg-gray-50 transition-colors"
                       >
-                        <div className="px-4 py-3 col-span-1 text-center font-medium text-gray-700">{item.id}</div>
+                        {/* <div className="px-4 py-3 col-span-1 text-center font-medium text-gray-700">{item.id}</div> */}
                         <div className="px-4 py-3 col-span-3 font-medium">{item.nama_fasilitas}</div>
                         <div className="px-4 py-3 col-span-3 text-gray-600 truncate">{item.keterangan}</div>
                         <div className="px-4 py-3 col-span-2 font-medium text-gray-700">{formatPrice(item.harga)}</div>
@@ -728,14 +739,6 @@ export default function Page() {
                         </span>
                       </p>
                     </div>
-                    {/* <div className="grid grid-cols-3 gap-2">
-                      <p className="font-medium text-gray-500">Dibuat pada:</p>
-                      <p className="col-span-2">{detailItem.created_at}</p>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <p className="font-medium text-gray-500">Diperbarui pada:</p>
-                      <p className="col-span-2">{detailItem.updated_at}</p>
-                    </div> */}
                   </div>
                 )}
                 <DialogFooter>
@@ -803,22 +806,39 @@ export default function Page() {
                       />
                     </div>
                     <div className="grid gap-2">
-                      <Label htmlFor="harga">Harga</Label>
+                      <Label htmlFor="harga">Harga <span className="text-red-500">*</span></Label>
                       <div className="relative">
-                        <div className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none">
-                          <span className="text-gray-500">Rp</span>
-                        </div>
+                        <span className="absolute left-4 top-1.5 text-gray-500">Rp</span>
                         <Input
                           id="harga"
                           name="harga"
-                          type="number"
+                          type="text"
                           value={formData.harga}
                           onChange={handleInputChange}
                           placeholder="0"
-                          className="pl-9"
-                          disabled={isLoading}
+                          className={
+                            (formData.harga === "" && formData.touched?.harga) ? 
+                            "pl-12 border-red-500" : "pl-12"
+                          }
+                          onBlur={() => {
+                            setFormData(prev => ({
+                              ...prev,
+                              touched: {
+                                ...prev.touched,
+                                harga: true
+                              }
+                            }));
+                          }}
                         />
                       </div>
+                      {formData.harga === "" && formData.touched?.harga && (
+                        <p className="text-sm text-red-500 mt-1">Harga acara harus diisi</p>
+                      )}
+                      {formData.harga && (
+                        <p className="text-sm text-gray-500 mt-1">
+                          Preview: {formatCurrency(formData.harga)}
+                        </p>
+                      )}
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="status">

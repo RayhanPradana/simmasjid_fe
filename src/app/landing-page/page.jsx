@@ -515,10 +515,10 @@ export default function Page() {
             </p>
           </div>
           
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 justify-center">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 justify-center">
             {[
               {
-                name: "Aula Utama",
+                name: "Auditorium",
                 capacity: "500 Orang",
                 image: "/img/auditorium.jpg",
                 features: ["Sound System", "AC", "Mimbar", "Proyektor"]
@@ -527,6 +527,12 @@ export default function Page() {
                 name: "Perpustakaan",
                 capacity: "50 Orang",
                 image: "/img/perpustakaan.png",
+                features: ["Koleksi Buku", "Wi-Fi", "Ruang Diskusi", "AC"]
+              },
+              {
+                name: "Masjid",
+                capacity: "1000 Orang",
+                image: "/img/auditorium.jpg",
                 features: ["Koleksi Buku", "Wi-Fi", "Ruang Diskusi", "AC"]
               }
             ].map((facility, index) => (
@@ -606,15 +612,16 @@ export default function Page() {
           </div>
           
           <div className="mt-12 text-center">
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md inline-flex items-center gap-2 transition-colors">
-              <Building size={20} />
-              <span>Reservasi Sekarang</span>
-            </button>
+            <a href="/landing-page/reservasi">
+              <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md inline-flex items-center gap-2 transition-colors">
+                <Building size={20} />
+                <span>Reservasi Sekarang</span>
+              </button>
+            </a>
           </div>
         </div>
       </section>
-
-      {/* News Section - Responsive */}
+      
       <section id="news" className="relative py-24 bg-green-50/70">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">

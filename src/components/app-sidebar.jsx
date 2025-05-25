@@ -11,10 +11,12 @@ import {
   Newspaper,
   Building,
   ClipboardCheck,
+  Clipboard,
   Book,
   BookmarkPlus,
   ChevronDown,
   ChevronRight,
+  Clock,
 } from "lucide-react";
 
 import { NavUser } from "@/components/nav-user";
@@ -122,19 +124,29 @@ export function AppSidebar() {
           icon: CalendarDays,
         },
         {
-          title: "Pembayaran",
-          url: "/dashboard/pembayaran",
-          icon: Book,
-        },
-        {
           title: "Fasilitas",
           url: "/dashboard/fasilitas",
           icon: Building,
         },
         {
-          title: "Reservasi Fasilitas",
+          title: "Sesi",
+          url: "/dashboard/sesi",
+          icon: Clock,
+        },
+        {
+          title: "Pembayaran",
+          url: "/dashboard/pembayaran",
+          icon: Book,
+        },
+        // {
+        //   title: "Konfirmasi Reservasi",
+        //   url: "/dashboard/konfirmasi-reservasi",
+        //   icon: ClipboardCheck,
+        // },
+        {
+          title: "Data Reservasi",
           url: "/dashboard/reservasi-fasilitas",
-          icon: ClipboardCheck,
+          icon: Clipboard,
         },
       ],
     },

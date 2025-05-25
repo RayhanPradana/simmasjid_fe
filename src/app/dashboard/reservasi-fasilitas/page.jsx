@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect } from "react"
@@ -24,6 +25,17 @@ import {
   Trash2,
   Loader2,
   AlertCircle,
+  Calendar,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Timer,
+  CreditCard,
+  DollarSign,
+  Tag,
+  Filter,
+  X,
+  ShieldCheck,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -50,7 +62,6 @@ import {
   Card,
   CardContent,
   CardDescription,
-  CardFooter,
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
@@ -60,43 +71,65 @@ import {
   SelectItem,
   SelectTrigger,
   SelectValue
-} from "@/components/ui/select";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import toast from "react-hot-toast";
+} from "@/components/ui/select"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Badge } from "@/components/ui/badge"
+import toast from "react-hot-toast"
 
-
-// API base URL
 const API_BASE_URL = "http://127.0.0.1:8000/api/reservasi"
 
 export default function Page() {
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
+  const [statusFilter, setStatusFilter] = useState("all")
+  const [dateFilter, setDateFilter] = useState("")
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
   const [detailItem, setDetailItem] = useState(null)
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false)
   const [selectedItem, setSelectedItem] = useState(null)
-  const [isLoading, setIsLoading] = useState(false);
-  const [validationErrors, setValidationErrors] = useState([]);
+  const [isLoading, setIsLoading] = useState(false)
+  const [validationErrors, setValidationErrors] = useState([])
+  const [currentUser, setCurrentUser] = useState(null)
   
   // Form data state
   const [formData, setFormData] = useState({
     acara_id: "",
     fasilitas_id: "",
-    user_id: "",
     tgl_reservasi: "",
-    jam_mulai: "",
-    jam_selesai: "",
-    harga: "",
-    status_pembayaran: "unpaid",
-  });
+    sesi_id: [],
+    user_id: "", // untuk admin
+    status_reservasi: "pending",
+  })
   const [isEditing, setIsEditing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
+  
+  // Reference data for dropdowns
   const [acara, setAcara] = useState([])
   const [fasilitas, setFasilitas] = useState([])
-  const [users, setUsers] = useState([])
+  const [sesi, setSesi] = useState([])
+  const [users, setUsers] = useState([]) // untuk admin
+  const [pricePreview, setPricePreview] = useState(null)
+  const [selectedStatus, setSelectedStatus] = useState('disetujui')
   const itemsPerPage = 5
+
+  // Get current user info
+  const getCurrentUser = () => {
+    try {
+      const userStr = localStorage.getItem("user")
+      if (userStr) {
+        const user = JSON.parse(userStr)
+        setCurrentUser(user)
+        return user
+      }
+    } catch (error) {
+      console.error("Failed to parse user data:", error)
+    }
+    return null
+  }
 
   // Fetch all reservations from API
   const fetchReservations = async () => {
@@ -115,48 +148,30 @@ export default function Page() {
 
       if (!response.ok) {
         if (response.status === 401) {
-          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.")
+          // Redirect to login page
+          window.location.href = "/login"
           return
         }
-
-        toast.error(`Gagal memuat data: ${response.status}`);
+        toast.error(`Gagal memuat data: ${response.status}`)
         return
       }
 
       const result = await response.json()
-      console.log("API response:", result)
       
-      // Check response format and access data correctly
-      if (result && Array.isArray(result.data)) {
-        setData(result.data)
-        setFilteredData(result.data)
-      }
-      // If result itself is an array
-      else if (Array.isArray(result)) {
+      // Controller returns direct array
+      if (Array.isArray(result)) {
         setData(result)
         setFilteredData(result)
-      }
-      // If result.data is an object with property containing array data
-      else if (result.data && typeof result.data === 'object' && !Array.isArray(result.data)) {
-        const dataArray = Object.values(result.data)
-        if (Array.isArray(dataArray[0])) {
-          setData(dataArray[0])
-          setFilteredData(dataArray[0])
-        } else {
-          setData(dataArray)
-          setFilteredData(dataArray)
-        }
-      }
-      // If no valid data
-      else {
-        console.error("Invalid data format received:", result)
+      } else {
+        console.error("Format data tidak valid:", result)
         setData([])
         setFilteredData([])
-        toast.error("Format data tidak valid");
+        toast.error("Format data tidak valid")
       }
     } catch (error) {
       console.error("Failed to fetch reservations:", error)
-      toast.error("Gagal memuat data reservasi");
+      toast.error("Gagal memuat data reservasi")
       setData([])
       setFilteredData([])
     } finally {
@@ -168,129 +183,160 @@ export default function Page() {
   const fetchRelatedData = async () => {
     try {
       const token = localStorage.getItem("token")
+      const user = getCurrentUser()
       
       // Fetch acara data
-      const acaraResponse = await fetch("http://127.0.0.1:8000/api/acara", {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      })
-      
-      if (acaraResponse.ok) {
-        const acaraResult = await acaraResponse.json()
-        setAcara(acaraResult.data || acaraResult)
+      try {
+        const acaraResponse = await fetch("http://127.0.0.1:8000/api/acara", {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        })
+        
+        if (acaraResponse.ok) {
+          const acaraResult = await acaraResponse.json()
+          setAcara(Array.isArray(acaraResult) ? acaraResult : acaraResult.data || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch acara:", error)
       }
       
       // Fetch fasilitas data
-      const fasilitasResponse = await fetch("http://127.0.0.1:8000/api/fasilitas", {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      })
-      
-      if (fasilitasResponse.ok) {
-        const fasilitasResult = await fasilitasResponse.json()
-        setFasilitas(fasilitasResult.data || fasilitasResult)
+      try {
+        const fasilitasResponse = await fetch("http://127.0.0.1:8000/api/fasilitas", {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        })
+        
+        if (fasilitasResponse.ok) {
+          const fasilitasResult = await fasilitasResponse.json()
+          setFasilitas(Array.isArray(fasilitasResult) ? fasilitasResult : fasilitasResult.data || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch fasilitas:", error)
       }
       
-      // Fetch user data
-      const userResponse = await fetch("http://127.0.0.1:8000/api/users", {
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      })
-      
-      if (userResponse.ok) {
-        const userResult = await userResponse.json()
-        setUsers(userResult.data || userResult)
+      // Fetch sesi data
+      try {
+        const sesiResponse = await fetch("http://127.0.0.1:8000/api/sesi", {
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+        })
+        
+        if (sesiResponse.ok) {
+          const sesiResult = await sesiResponse.json()
+          setSesi(Array.isArray(sesiResult) ? sesiResult : sesiResult.data || [])
+        }
+      } catch (error) {
+        console.error("Failed to fetch sesi:", error)
+      }
+
+      // Fetch users for admin
+      if (user && user.role === 'admin') {
+        try {
+          const usersResponse = await fetch("http://127.0.0.1:8000/api/users", {
+            headers: {
+              "Content-Type": "application/json",
+              "Accept": "application/json",
+              "Authorization": `Bearer ${token}`,
+            },
+          })
+          
+          if (usersResponse.ok) {
+            const usersResult = await usersResponse.json()
+            setUsers(Array.isArray(usersResult) ? usersResult : usersResult.data || [])
+          }
+        } catch (error) {
+          console.error("Failed to fetch users:", error)
+        }
       }
       
     } catch (error) {
       console.error("Failed to fetch related data:", error)
-      toast.error("Gagal memuat data terkait");
+      toast.error("Gagal memuat data terkait")
     }
   }
 
-  // Check for time slot conflicts
-  const checkTimeConflicts = () => {
-    // Reset previous validation errors
-    setValidationErrors([]);
-    
-    if (!formData.fasilitas_id || !formData.tgl_reservasi || !formData.jam_mulai || !formData.jam_selesai) {
-      return false; // Not enough data to check conflicts
-    }
-
-    // Convert times to minutes for easier comparison
-    const convertTimeToMinutes = (time) => {
-      const [hours, minutes] = time.split(':').map(Number);
-      return hours * 60 + minutes;
-    };
-
-    const newStartTime = convertTimeToMinutes(formData.jam_mulai);
-    const newEndTime = convertTimeToMinutes(formData.jam_selesai);
-    
-    // Basic validation - end time must be after start time
-    if (newEndTime <= newStartTime) {
-      setValidationErrors(prev => [...prev, "Jam selesai harus lebih besar dari jam mulai"]);
-      return true;
-    }
-
-    // Check for overlaps with existing reservations
-    let hasConflict = false;
-    
-    data.forEach(reservation => {
-      // Skip checking against the current reservation if we're editing
-      if (isEditing && reservation.id == formData.id) return;
-      
-      // Only check same facility and same date
-      if (reservation.fasilitas_id == formData.fasilitas_id && 
-          reservation.tgl_reservasi === formData.tgl_reservasi) {
-        
-        const existingStartTime = convertTimeToMinutes(reservation.jam_mulai);
-        const existingEndTime = convertTimeToMinutes(reservation.jam_selesai);
-        
-        // Check for overlap
-        // Two time ranges overlap if one's start time is before the other's end time
-        // AND that same range's end time is after the other's start time
-        if ((newStartTime < existingEndTime && newEndTime > existingStartTime)) {
-          hasConflict = true;
-          const facilityName = getFasilitasName(reservation.fasilitas_id);
-          const existingUser = getUserName(reservation.user_id);
-          
-          setValidationErrors(prev => [
-            ...prev, 
-            `Konflik jadwal: Fasilitas ${facilityName} sudah direservasi oleh ${existingUser} pada jam ${reservation.jam_mulai} - ${reservation.jam_selesai}`
-          ]);
-        }
-      }
-    });
-    
-    return hasConflict;
-  };
-
-  // Create new reservation
-  const createReservation = async () => {
-    // First check for time conflicts
-    if (checkTimeConflicts()) {
-      return false;
-    }
-    
+  // Confirm reservation status (for admin)
+  const confirmReservation = async () => {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
       
-      // Make sure harga is set from the facility price
-      const selectedFacility = fasilitas.find(f => f.id == formData.fasilitas_id);
-      const dataToSend = {
-        ...formData,
-        harga: selectedFacility?.harga || 0
-      };
+      const response = await fetch(`${API_BASE_URL}/confirm/${selectedItem.id}`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ status: selectedStatus }),
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        toast.error(errorData.message || `Gagal mengubah status: ${response.status}`)
+        return false
+      }
+      
+      const result = await response.json()
+      toast.success(result.message || "Status reservasi berhasil diperbarui")
+      return true
+      
+    } catch (error) {
+      console.error("Failed to confirm reservation:", error)
+      toast.error("Gagal mengubah status reservasi")
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Calculate price preview when form inputs change
+  useEffect(() => {
+    if (formData.acara_id && formData.fasilitas_id && !isEditing) {
+      const selectedAcara = acara.find(a => a.id.toString() === formData.acara_id)
+      const selectedFasilitas = fasilitas.find(f => f.id.toString() === formData.fasilitas_id)
+      
+      if (selectedAcara && selectedFasilitas) {
+        // Ensure both values are parsed as numbers before adding
+        const acaraHarga = selectedAcara.harga ? parseFloat(selectedAcara.harga) : 0
+        const fasilitasHarga = selectedFasilitas.harga ? parseFloat(selectedFasilitas.harga) : 0
+        const totalHarga = acaraHarga + fasilitasHarga
+        setPricePreview(totalHarga)
+      }
+    } else {
+      setPricePreview(null)
+    }
+  }, [formData.acara_id, formData.fasilitas_id, acara, fasilitas, isEditing])
+
+  // Create new reservation
+  const createReservation = async () => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      const user = getCurrentUser()
+      
+      // Prepare form data
+      const submitData = {
+        acara_id: formData.acara_id,
+        fasilitas_id: formData.fasilitas_id,
+        tgl_reservasi: formData.tgl_reservasi,
+        sesi_id: formData.sesi_id.map(id => parseInt(id)) // Ensure integers
+      }
+
+      // Add user_id for admin
+      if (user && user.role === 'admin' && formData.user_id) {
+        submitData.user_id = parseInt(formData.user_id)
+      }
       
       const response = await fetch(`${API_BASE_URL}`, {
         method: "POST",
@@ -299,21 +345,22 @@ export default function Page() {
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(dataToSend),
+        body: JSON.stringify(submitData),
       })
       
+      const responseData = await response.json()
+      
       if (!response.ok) {
-        const errorData = await response.json()
-        toast.error(errorData.message || `Gagal menambah data: ${response.status}`);
+        toast.error(responseData.message || `Gagal menambah data: ${response.status}`)
         return false
       }
       
-      toast.success("Data reservasi berhasil ditambahkan");
+      toast.success(responseData.message || "Data reservasi berhasil ditambahkan")
       return true
       
     } catch (error) {
       console.error("Failed to create reservation:", error)
-      toast.error("Gagal menambah data reservasi");
+      toast.error("Gagal menambah data reservasi")
       return false
     } finally {
       setIsLoading(false)
@@ -322,21 +369,21 @@ export default function Page() {
   
   // Update existing reservation
   const updateReservation = async () => {
-    // First check for time conflicts
-    if (checkTimeConflicts()) {
-      return false;
-    }
-    
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
+      const user = getCurrentUser()
       
-      // Make sure harga is set from the facility price
-      const selectedFacility = fasilitas.find(f => f.id == formData.fasilitas_id);
-      const dataToSend = {
-        ...formData,
-        harga: selectedFacility?.harga || 0
-      };
+      // Prepare form data - sesuai dengan controller update
+      const submitData = {
+        tgl_reservasi: formData.tgl_reservasi,
+        sesi_id: formData.sesi_id.map(id => parseInt(id)) // Ensure integers
+      }
+
+      // Add status for admin
+      if (user && user.role === 'admin' && formData.status_reservasi) {
+        submitData.status_reservasi = formData.status_reservasi
+      }
       
       const response = await fetch(`${API_BASE_URL}/${formData.id}`, {
         method: "PUT",
@@ -345,21 +392,22 @@ export default function Page() {
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(dataToSend),
+        body: JSON.stringify(submitData),
       })
       
+      const responseData = await response.json()
+      
       if (!response.ok) {
-        const errorData = await response.json()
-        toast.error(errorData.message || `Gagal memperbarui data: ${response.status}`);
+        toast.error(responseData.message || `Gagal memperbarui data: ${response.status}`)
         return false
       }
       
-      toast.success("Data reservasi berhasil diperbarui");
+      toast.success(responseData.message || "Data reservasi berhasil diperbarui")
       return true
       
     } catch (error) {
       console.error("Failed to update reservation:", error)
-      toast.error("Gagal memperbarui data reservasi");
+      toast.error("Gagal memperbarui data reservasi")
       return false
     } finally {
       setIsLoading(false)
@@ -383,118 +431,159 @@ export default function Page() {
       
       if (!response.ok) {
         const errorData = await response.json()
-        toast.error(errorData.message || `Gagal menghapus data: ${response.status}`);
+        toast.error(errorData.message || `Gagal menghapus data: ${response.status}`)
         return false
       }
       
-      toast.success("Data reservasi berhasil dihapus");
+      const result = await response.json()
+      toast.success(result.message || "Data reservasi berhasil dihapus")
       return true
       
     } catch (error) {
       console.error("Failed to delete reservation:", error)
-      toast.error("Gagal menghapus data reservasi");
+      toast.error("Gagal menghapus data reservasi")
       return false
     } finally {
       setIsLoading(false)
     }
   }
 
+  // Update status otomatis (admin only)
+  const updateStatusOtomatis = async () => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      
+      const response = await fetch(`${API_BASE_URL}/update-status-otomatis`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      })
+      
+      if (!response.ok) {
+        const errorData = await response.json()
+        toast.error(errorData.message || `Gagal memperbarui status: ${response.status}`)
+        return false
+      }
+      
+      const result = await response.json()
+      toast.success(result.message || "Status reservasi berhasil diperbarui secara otomatis")
+      return true
+      
+    } catch (error) {
+      console.error("Failed to update status automatically:", error)
+      toast.error("Gagal memperbarui status secara otomatis")
+      return false
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  {/* Add this handler function in your component */}
+  const handleUpdateStatusOtomatis = async () => {
+    const success = await updateStatusOtomatis()
+    if (success) {
+      fetchReservations() // Refresh data after successful update
+    }
+  }
+
+  {/* Handler for individual status update */}
+  const handleUpdateSingleStatus = async (item) => {
+    // You might want to create a specific endpoint for single item status update
+    // or modify the existing function to accept an item ID
+    const success = await updateStatusOtomatis()
+    if (success) {
+      fetchReservations()
+    }
+  }
+
   useEffect(() => {
+    getCurrentUser()
     fetchReservations()
     fetchRelatedData()
   }, [])
 
+  // Updated filtering effect with status and date filters
   useEffect(() => {
-    const filtered = data.filter(item =>
-      (item.fasilitas?.nama_fasilitas?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (item.user?.name?.toLowerCase() || "").includes(searchTerm.toLowerCase()) ||
-      (item.status_pembayaran?.toLowerCase() || "").includes(searchTerm.toLowerCase())
-    )
+    let filtered = data.filter(item => {
+      const searchTermLower = searchTerm.toLowerCase()
+      const matchesSearch = (
+        (item.fasilitas?.nama_fasilitas?.toLowerCase() || "").includes(searchTermLower) ||
+        (item.acara?.nama_acara?.toLowerCase() || "").includes(searchTermLower) ||
+        (item.status_reservasi?.toLowerCase() || "").includes(searchTermLower) ||
+        (item.user?.name?.toLowerCase() || "").includes(searchTermLower)
+      )
+      
+      const matchesStatus = statusFilter === "all" || item.status_reservasi === statusFilter
+      const matchesDate = !dateFilter || item.tgl_reservasi === dateFilter
+      
+      return matchesSearch && matchesStatus && matchesDate
+    })
+    
     setFilteredData(filtered)
     setCurrentPage(1)
-  }, [searchTerm, data])
+  }, [searchTerm, statusFilter, dateFilter, data])
 
-  // Handle input changes
+  // Handle text input changes
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    
-    // If the facility changes, update the price
-    if (name === "fasilitas_id") {
-      const selectedFacility = fasilitas.find(f => f.id == value);
-      setFormData(prev => ({
-        ...prev,
-        [name]: value,
-        harga: selectedFacility?.harga || 0
-      }));
-    } else {
-      setFormData(prev => ({
-        ...prev,
-        [name]: value
-      }));
-    }
+    const { name, value } = e.target
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
     
     // Clear validation errors when inputs change
-    if (["fasilitas_id", "tgl_reservasi", "jam_mulai", "jam_selesai"].includes(name)) {
-      setValidationErrors([]);
-    }
-  };
-
-  const formatTimeDisplay = (timeString) => {
-    if (!timeString) return "-"
-    
-    // If the time is already in HH:MM format, return it
-    if (/^\d{2}:\d{2}(:\d{2})?$/.test(timeString)) {
-      return timeString.substring(0, 5) // Return only HH:MM
-    }
-    
-    return timeString
+    setValidationErrors([])
   }
 
-  // Format date for input element (YYYY-MM-DD)
-  const formatDateForInput = (dateString) => {
-    if (!dateString) return ""
+  // Handle select changes
+  const handleSelectChange = (name, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }))
     
-    // Check if already in YYYY-MM-DD format
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateString)) {
-      return dateString
-    }
-    
-    try {
-      // Try to convert from DD-MM-YYYY or other formats to YYYY-MM-DD
-      const parts = dateString.split(/[-\/]/)
-      if (parts.length === 3) {
-        // Check format based on part lengths
-        if (parts[0].length === 4) {
-          // Already YYYY-MM-DD
-          return dateString
-        } else {
-          // Assume DD-MM-YYYY and convert to YYYY-MM-DD
-          return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`
+    // Clear validation errors when inputs change
+    setValidationErrors([])
+  }
+
+  // Handle status change in confirmation modal
+  const handleStatusChange = (value) => {
+    setSelectedStatus(value)
+  }
+
+  // Handle session selection
+  const handleSesiChange = (sesiId) => {
+    setFormData(prev => {
+      const sesiIdString = sesiId.toString()
+      if (prev.sesi_id.includes(sesiIdString)) {
+        return {
+          ...prev,
+          sesi_id: prev.sesi_id.filter(id => id !== sesiIdString)
+        }
+      } else {
+        return {
+          ...prev,
+          sesi_id: [...prev.sesi_id, sesiIdString]
         }
       }
-      
-      // If can't determine format, create a Date object and format it
-      const date = new Date(dateString)
-      if (!isNaN(date.getTime())) {
-        return date.toISOString().split('T')[0]
-      }
-    } catch (error) {
-      console.error("Error formatting date:", error)
-    }
+    })
     
-    return dateString
+    // Clear validation errors when inputs change
+    setValidationErrors([])
   }
 
   const handleAddNew = () => {
     setFormData({
       acara_id: "",
       fasilitas_id: "",
-      user_id: "",
       tgl_reservasi: "",
-      jam_mulai: "",
-      jam_selesai: "",
-      harga: "",
-      status_pembayaran: "unpaid"
+      sesi_id: [],
+      user_id: "",
+      status_reservasi: "pending"
     })
     setIsEditing(false)
     setValidationErrors([])
@@ -502,102 +591,101 @@ export default function Page() {
   }
 
   const handleEdit = (item) => {
+    // Extract sesi IDs from the relationship
+    const sesiIds = item.sesi ? item.sesi.map(s => s.id.toString()) : []
+    
     setFormData({
       id: item.id,
-      acara_id: item.acara_id,
-      fasilitas_id: item.fasilitas_id,
-      user_id: item.user_id,
-      tgl_reservasi: formatDateForInput(item.tgl_reservasi),
-      jam_mulai: item.jam_mulai,
-      jam_selesai: item.jam_selesai,
-      harga: item.harga || getFasilitasPrice(item.fasilitas_id),
-      status_pembayaran: item.status_pembayaran
+      acara_id: item.acara_id.toString(),
+      fasilitas_id: item.fasilitas_id.toString(),
+      tgl_reservasi: item.tgl_reservasi,
+      sesi_id: sesiIds,
+      user_id: item.user_id ? item.user_id.toString() : "",
+      status_reservasi: item.status_reservasi
     })
     setIsEditing(true)
     setValidationErrors([])
     setIsAddModalOpen(true)
   }
 
+  const handleConfirmClick = (item) => {
+    setSelectedItem(item)
+    // Set default next status based on current status
+    let nextStatus = 'disetujui'
+    switch(item.status_reservasi) {
+      case 'pending':
+        nextStatus = 'disetujui'
+        break
+      case 'disetujui':
+        nextStatus = 'menunggu lunas'
+        break
+      case 'menunggu lunas':
+        nextStatus = 'siap digunakan'
+        break
+      case 'siap digunakan':
+        nextStatus = 'sedang berlangsung'
+        break
+      case 'sedang berlangsung':
+        nextStatus = 'selesai'
+        break
+      default:
+        nextStatus = 'disetujui'
+    }
+    setSelectedStatus(nextStatus)
+    setIsConfirmModalOpen(true)
+  }
+
   const handleDeleteClick = (item) => {
     setSelectedItem(item)
     setIsDeleteModalOpen(true)
-  }
-
-  // Validate time format
-  const validateTimeFormat = (time) => {
-    return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(time);
   }
   
   // Handle form submission for both create and update
   const handleFormSubmit = async () => {
     try {
       // Clear previous validation errors
-      setValidationErrors([]);
+      setValidationErrors([])
       
       // Basic form validation
-      const errors = [];
+      const errors = []
       
-      if (!formData.acara_id) errors.push("Acara harus dipilih");
-      if (!formData.fasilitas_id) errors.push("Fasilitas harus dipilih");
-      if (!formData.user_id) errors.push("Penyewa harus dipilih");
-      if (!formData.tgl_reservasi) errors.push("Tanggal reservasi harus diisi");
-      
-      if (!formData.jam_mulai) {
-        errors.push("Jam mulai harus diisi");
-      } else if (!validateTimeFormat(formData.jam_mulai)) {
-        errors.push("Format jam mulai tidak valid (HH:MM)");
-      }
-      
-      if (!formData.jam_selesai) {
-        errors.push("Jam selesai harus diisi");
-      } else if (!validateTimeFormat(formData.jam_selesai)) {
-        errors.push("Format jam selesai tidak valid (HH:MM)");
-      }
-      
-      // Check if end time is after start time
-      if (formData.jam_mulai && formData.jam_selesai) {
-        const startTime = new Date(`2000-01-01T${formData.jam_mulai}`);
-        const endTime = new Date(`2000-01-01T${formData.jam_selesai}`);
-        
-        if (endTime <= startTime) {
-          errors.push("Jam selesai harus lebih besar dari jam mulai");
-        }
-      }
+      if (!formData.acara_id && !isEditing) errors.push("Acara harus dipilih")
+      if (!formData.fasilitas_id && !isEditing) errors.push("Fasilitas harus dipilih")
+      if (!formData.tgl_reservasi) errors.push("Tanggal reservasi harus diisi")
+      if (formData.sesi_id.length === 0) errors.push("Minimal satu sesi harus dipilih")
       
       if (errors.length > 0) {
-        setValidationErrors(errors);
-        return;
+        setValidationErrors(errors)
+        return
       }
 
       // Execute the appropriate operation based on whether we're editing or not
-      let success = false;
+      let success = false
       if (isEditing) {
-        success = await updateReservation();
+        success = await updateReservation()
       } else {
-        success = await createReservation();
+        success = await createReservation()
       }
       
       if (success) {
-        setIsAddModalOpen(false);
-        fetchReservations(); // Refresh data after successful operation
+        setIsAddModalOpen(false)
+        fetchReservations() // Refresh data after successful operation
         
         // Reset form
         setFormData({
           acara_id: "",
           fasilitas_id: "",
-          user_id: "",
           tgl_reservasi: "",
-          jam_mulai: "",
-          jam_selesai: "",
-          harga: "",
-          status_pembayaran: "unpaid",
-        });
+          sesi_id: [],
+          user_id: "",
+          status_reservasi: "pending"
+        })
       }
     } catch (error) {
-      console.error("Error saving data:", error);
-      toast.error("Terjadi kesalahan saat menyimpan data");
+      console.error("Error saving data:", error)
+      toast.error("Terjadi kesalahan saat menyimpan data")
     }
-  };
+  }
 
   const handleDelete = async () => {
     const success = await deleteReservation()
@@ -607,37 +695,132 @@ export default function Page() {
     }
   }
 
+  const handleConfirm = async () => {
+    const success = await confirmReservation()
+    if (success) {
+      setIsConfirmModalOpen(false)
+      fetchReservations()
+    }
+  }
+
   const handleDetails = (item) => {
     setDetailItem(item)
     setIsDetailModalOpen(true)
   }
 
-  const getFasilitasName = (id) => {
-    const facility = fasilitas.find(f => f.id == id)
-    return facility ? facility.nama_fasilitas : "-"
+  // Clear all filters
+  const clearFilters = () => {
+    setSearchTerm("")
+    setStatusFilter("all")
+    setDateFilter("")
   }
 
-  const getAcaraName = (id) => {
-    const event = acara.find(a => a.id == id)
-    return event ? event.nama_acara : "-"
+  const getFasilitasName = (item) => {
+    return item.fasilitas?.nama_fasilitas || "-"
   }
 
-  const getUserName = (id) => {
-    const user = users.find(u => u.id == id)
-    return user ? user.name : "-"
+  const getAcaraName = (item) => {
+    return item.acara?.nama_acara || "-"
   }
 
-  const getFasilitasPrice = (id) => {
-    const facility = fasilitas.find(f => f.id == id)
-    return facility && facility.harga ? facility.harga : 0
+  const getUserName = (item) => {
+    return item.user?.name || "-"
   }
 
-  // Format currency price
-  const formatPrice = (price) => {
-    if (!price && price !== 0) return "-";
-    return `Rp. ${Number(price).toLocaleString()}`;
+  const getSesiNames = (sesiArray) => {
+    if (!sesiArray || !Array.isArray(sesiArray) || sesiArray.length === 0) return "-"
+    
+    return sesiArray.map(s => s.nama_sesi || `Sesi ${s.id}`).join(", ")
   }
 
+  const getSesiTimes = (sesiArray) => {
+    if (!sesiArray || !Array.isArray(sesiArray) || sesiArray.length === 0) return "-"
+    
+    return sesiArray.map(s => `${s.jam_mulai} - ${s.jam_selesai}`).join(", ")
+  }
+
+  // Format currency (IDR)
+  const formatRupiah = (amount) => {
+    if (amount === null || amount === undefined) return "Rp0"
+    return new Intl.NumberFormat('id-ID', { 
+      style: 'currency', 
+      currency: 'IDR',
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount)
+  }
+
+  const getStatusBadgeClass = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800 border-yellow-200'
+      case 'disetujui':
+        return 'bg-green-100 text-green-800 border-green-200'
+      case 'ditolak':
+        return 'bg-red-100 text-red-800 border-red-200'
+      case 'menunggu lunas':
+        return 'bg-orange-100 text-orange-800 border-orange-200'
+      case 'siap digunakan':
+        return 'bg-cyan-100 text-cyan-800 border-cyan-200'
+      case 'sedang berlangsung':
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+      case 'dibatalkan':
+        return 'bg-gray-100 text-gray-800 border-gray-200'
+      case 'selesai':
+        return 'bg-purple-100 text-purple-800 border-purple-200'
+      default:
+        return 'bg-blue-100 text-blue-800 border-blue-200'
+    }
+  }
+
+  const getStatusIcon = (status) => {
+    switch (status?.toLowerCase()) {
+      case 'pending':
+        return <Timer className="h-3 w-3" />
+      case 'disetujui':
+        return <CheckCircle className="h-3 w-3" />
+      case 'ditolak':
+        return <XCircle className="h-3 w-3" />
+      case 'menunggu lunas':
+        return <CreditCard className="h-3 w-3" />
+      case 'siap digunakan':
+        return <ShieldCheck className="h-3 w-3" />
+      case 'sedang berlangsung':
+        return <Clock className="h-3 w-3" />
+      case 'dibatalkan':
+        return <XCircle className="h-3 w-3" />
+      case 'selesai':
+        return <CheckCircle className="h-3 w-3" />
+      default:
+        return <AlertCircle className="h-3 w-3" />
+    }
+  }
+
+  // Check if user can edit/delete/confirm reservation
+  const canEditReservation = (item) => {
+    if (!currentUser) return false
+    return currentUser.role === 'admin' || currentUser.id === item.user_id
+  }
+
+  const canDeleteReservation = (item) => {
+    if (!currentUser) return false
+    return currentUser.role === 'admin' || currentUser.id === item.user_id
+  }
+
+  const canConfirmReservation = (item) => {
+    if (!currentUser || currentUser.role !== 'admin') return false
+    // Only allow confirmation for specific status transitions
+    const allowedStatuses = ['pending', 'disetujui', 'menunggu lunas', 'siap digunakan', 'sedang berlangsung']
+    return allowedStatuses.includes(item.status_reservasi)
+  }
+
+  // Get unique statuses from data for filter dropdown
+  const getUniqueStatuses = () => {
+    const statuses = [...new Set(data.map(item => item.status_reservasi).filter(Boolean))]
+    return statuses
+  }
+
+  // Pagination setup
   const indexOfLastItem = currentPage * itemsPerPage
   const indexOfFirstItem = indexOfLastItem - itemsPerPage
   const currentItems = filteredData.slice(indexOfFirstItem, indexOfLastItem)
@@ -675,447 +858,627 @@ export default function Page() {
               <CardHeader className="pb-3">
                 <div className="flex justify-between items-center">
                   <div>
-                    <CardTitle>Reservasi</CardTitle>
-                    <CardDescription>Kelola data reservasi fasilitas</CardDescription>
+                    <CardTitle>Reservasi Fasilitas</CardTitle>
+                    <CardDescription>
+                      {currentUser?.role === 'admin' 
+                        ? 'Kelola semua data reservasi fasilitas' 
+                        : 'Kelola reservasi fasilitas Anda'
+                      }
+                    </CardDescription>
                   </div>
-                  <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
-                    <Plus className="h-4 w-4" /> Tambah data
-                  </Button>
+                  <div className="flex items-center gap-2">
+                    {/* Auto Update Status Button - Only for Admin */}
+                    {currentUser?.role === 'admin' && (
+                      <Button 
+                        onClick={handleUpdateStatusOtomatis} 
+                        variant="outline"
+                        size="sm" 
+                        className="flex items-center gap-1"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? (
+                          <Loader2 className="h-4 w-4 animate-spin" />
+                        ) : (
+                          <Clock className="h-4 w-4" />
+                        )}
+                        Update Status Otomatis
+                      </Button>
+                    )}
+                    
+                    <Button onClick={handleAddNew} size="sm" className="flex items-center gap-1">
+                      <Plus className="h-4 w-4" /> Tambah Reservasi
+                    </Button>
+                  </div>
                 </div>
               </CardHeader>
               <CardContent>
-                {/* Pencarian */}
-                <div className="flex items-center mb-4">
-                  <div className="relative flex-1">
-                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                    <Input
-                      placeholder="Cari data reservasi..."
-                      className="pl-8 w-full"
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                    />
-                  </div>
-                </div>
-
-                {/* Tabel Reservasi */}
-                <div className="rounded-md border overflow-hidden">
-                  {/* Header Tabel */}
-                  <div className="bg-gray-50 border-b grid grid-cols-11 text-xs font-medium text-gray-500 uppercase">
-                    <div className="px-4 py-3 col-span-1">ID</div>
-                    <div className="px-4 py-3 col-span-1">Acara</div>
-                    <div className="px-4 py-3 col-span-1">Fasilitas</div>
-                    <div className="px-4 py-3 col-span-2">Penyewa</div>
-                    <div className="px-4 py-3 col-span-1">Tanggal</div>
-                    <div className="px-4 py-3 col-span-1">Mulai</div>
-                    <div className="px-4 py-3 col-span-1">Selesai</div>
-                    <div className="px-4 py-3 col-span-1">Harga</div>
-                    <div className="px-4 py-3 col-span-1">Status</div>
-                    <div className="px-4 py-3 col-span-1 text-right">Aksi</div>
+                {/* Filter Section */}
+                <div className="space-y-4 mb-6">
+                  {/* Search Bar */}
+                  <div className="flex items-center gap-4">
+                    <div className="relative flex-1">
+                      <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                      <Input
+                        placeholder="Cari berdasarkan fasilitas, acara, status, atau user..."
+                        className="pl-8 w-full"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                      />
+                    </div>
                   </div>
 
-                  {/* Isi Tabel */}
-                  <div className="max-h-[400px] overflow-y-auto">
-                    {isLoading ? (
-                      <div className="flex justify-center items-center py-8 text-gray-500 col-span-10">
-                        <Loader2 className="h-6 w-6 animate-spin mr-2" />
-                        <span>Memuat data...</span>
-                      </div>
-                    ) : currentItems.length > 0 ? (
-                      currentItems.map((item) => (
-                        <div
-                          key={item.id}
-                          className="grid grid-cols-11 border-b text-sm hover:bg-gray-50"
-                        >
-                          <div className="px-4 py-3 col-span-1">{item.id}</div>
-                          <div className="px-4 py-3 col-span-1">{getAcaraName(item.acara_id)}</div>
-                          <div className="px-4 py-3 col-span-1">{getFasilitasName(item.fasilitas_id)}</div>
-                          <div className="px-4 py-3 col-span-2">{getUserName(item.user_id)}</div>
-                          <div className="px-4 py-3 col-span-1">{item.tgl_reservasi}</div>
-                          <div className="px-4 py-3 col-span-1">{formatTimeDisplay(item.jam_mulai)}</div>
-                          <div className="px-4 py-3 col-span-1">{formatTimeDisplay(item.jam_selesai)}</div>
-                          <div className="px-4 py-3 col-span-1">
-                            {formatPrice(item.harga || getFasilitasPrice(item.fasilitas_id))}
-                          </div>
-                          <div className="px-4 py-3 col-span-1">
-                            <span
-                              className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                item.status_pembayaran === "paid"
-                                  ? "bg-green-100 text-green-700"
-                                  : "bg-yellow-100 text-yellow-700"
-                              }`}
-                            >
-                              {item.status_pembayaran}
-                            </span>
-                          </div>
-                          <div className="px-4 py-3 col-span-1 text-right">
-                            <div className="flex justify-end gap-2">
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleDetails(item)}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleEdit(item)}
-                              >
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="h-8 w-8 p-0"
-                                onClick={() => handleDeleteClick(item)}
-                              >
-                                <Trash2 className="h-4 w-4 text-red-500" />
-                              </Button>
-                            </div>
-                          </div>
-                        </div>
-                      ))
-                    ) : (
-                      <div className="flex justify-center items-center py-8 text-gray-500 col-span-11">
-                        {searchTerm ? (
-                          <>
-                            <AlertCircle className="h-5 w-5 mr-2" />
-                            <span>Tidak ada data yang sesuai dengan pencarian</span>
-                          </>
-                        ) : (
-                          <>
-                            <AlertCircle className="h-5 w-5 mr-2" />
-                            <span>Belum ada data reservasi</span>
-                          </>
-                        )}
-                      </div>
+                  {/* Filter Controls */}
+                  <div className="flex flex-wrap items-center gap-4">
+                    <div className="flex items-center gap-2">
+                      <Filter className="h-4 w-4 text-gray-500" />
+                      <span className="text-sm font-medium text-gray-700">Filter:</span>
+                    </div>
+                    
+                    {/* Status Filter */}
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-gray-500">Status:</Label>
+                      <Select value={statusFilter} onValueChange={setStatusFilter}>
+                        <SelectTrigger className="w-48">
+                          <SelectValue placeholder="Pilih status" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Semua Status</SelectItem>
+                          {getUniqueStatuses().map(status => (
+                            <SelectItem key={status} value={status}>
+                              {status}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* Date Filter */}
+                    <div className="flex items-center gap-2">
+                      <Label className="text-xs text-gray-500">Tanggal:</Label>
+                      <Input
+                        type="date"
+                        className="w-48"
+                        value={dateFilter}
+                        onChange={(e) => setDateFilter(e.target.value)}
+                      />
+                    </div>
+
+                    {/* Clear Filters */}
+                    {(searchTerm || statusFilter !== "all" || dateFilter) && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={clearFilters}
+                        className="flex items-center gap-1 text-gray-500"
+                      >
+                        <X className="h-3 w-3" />
+                        Clear Filters
+                      </Button>
                     )}
                   </div>
+
+                  {/* Results Counter */}
+                  <div className="text-sm text-gray-500">
+                    Menampilkan {filteredData.length} dari {data.length} reservasi
+                  </div>
                 </div>
 
-                {/* Pagination */}
-                {filteredData.length > itemsPerPage && (
-                  <div className="flex justify-center mt-4">
-                    <nav className="flex space-x-1">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => paginate(currentPage - 1)}
-                        disabled={currentPage === 1}
-                      >
-                        Prev
-                      </Button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                        <Button
-                          key={number}
-                          variant={currentPage === number ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => paginate(number)}
-                        >
-                          {number}
-                        </Button>
-                      ))}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => paginate(currentPage + 1)}
-                        disabled={currentPage === totalPages}
-                      >
-                        Next
-                      </Button>
-                    </nav>
+                {/* Data Table */}
+                {isLoading ? (
+                  <div className="flex justify-center items-center py-12">
+                    <Loader2 className="h-6 w-6 animate-spin" />
+                    <span className="ml-2">Memuat data...</span>
+                  </div>
+                ) : filteredData.length === 0 ? (
+                  <div className="text-center py-12">
+                    <AlertCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium text-gray-900 mb-2">
+                      {data.length === 0 ? "Belum ada data" : "Tidak ada hasil"}
+                    </h3>
+                    <p className="text-gray-500">
+                      {data.length === 0 
+                        ? "Belum ada reservasi yang dibuat." 
+                        : "Coba ubah filter atau kata kunci pencarian."
+                      }
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    <div className="overflow-x-auto">
+                      <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
+                        <thead>
+                          <tr className="border-b bg-gray-50">
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">No</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Fasilitas</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Acara</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">User</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Tanggal</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Sesi</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Status</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Total Harga</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Aksi</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {currentItems.map((item, index) => (
+                            <tr key={item.id} className="border-b hover:bg-gray-50">
+                              <td className="p-3 text-sm text-gray-900">
+                                {indexOfFirstItem + index + 1}
+                              </td>
+                              <td className="p-3 text-sm text-gray-900">
+                                {getFasilitasName(item)}
+                              </td>
+                              <td className="p-3 text-sm text-gray-900">
+                                {getAcaraName(item)}
+                              </td>
+                              <td className="p-3 text-sm text-gray-900">
+                                {getUserName(item)}
+                              </td>
+                              <td className="p-3 text-sm text-gray-900">
+                                {new Date(item.tgl_reservasi).toLocaleDateString('id-ID')}
+                              </td>
+                              <td className="p-3 text-sm text-gray-900">
+                                <div className="space-y-1">
+                                  <div>{getSesiNames(item.sesi)}</div>
+                                  <div className="text-xs text-gray-500">{getSesiTimes(item.sesi)}</div>
+                                </div>
+                              </td>
+                              <td className="p-3">
+                                <Badge className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadgeClass(item.status_reservasi)}`}>
+                                  {getStatusIcon(item.status_reservasi)}
+                                  {item.status_reservasi}
+                                </Badge>
+                              </td>
+                              <td className="p-3 text-sm text-gray-900 font-medium">
+                                {formatRupiah(item.harga)}
+                              </td>
+                              <td className="p-3">
+                                <div className="flex items-center gap-1">
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleDetails(item)}
+                                    className="h-8 w-8 p-0"
+                                  >
+                                    <Eye className="h-4 w-4" />
+                                  </Button>
+                                  
+                                  {canEditReservation(item) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleEdit(item)}
+                                      className="h-8 w-8 p-0"
+                                    >
+                                      <Edit className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  
+                                  {canConfirmReservation(item) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleConfirmClick(item)}
+                                      className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                                    >
+                                      <CheckCircle className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Auto Status Update for specific reservation - Admin only */}
+                                  {currentUser?.role === 'admin' && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleUpdateSingleStatus(item)}
+                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                                      title="Update Status Otomatis"
+                                    >
+                                      <Clock className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                  
+                                  {canDeleteReservation(item) && (
+                                    <Button
+                                      variant="ghost"
+                                      size="sm"
+                                      onClick={() => handleDeleteClick(item)}
+                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
+                                    >
+                                      <Trash2 className="h-4 w-4" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Pagination */}
+                    {totalPages > 1 && (
+                      <div className="flex items-center justify-between">
+                        <div className="text-sm text-gray-500">
+                          Menampilkan {indexOfFirstItem + 1} - {Math.min(indexOfLastItem, filteredData.length)} dari {filteredData.length} data
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => paginate(currentPage - 1)}
+                            disabled={currentPage === 1}
+                          >
+                            Sebelumnya
+                          </Button>
+                          
+                          {Array.from({ length: totalPages }, (_, i) => i + 1).map(number => (
+                            <Button
+                              key={number}
+                              variant={currentPage === number ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => paginate(number)}
+                              className="w-8 h-8 p-0"
+                            >
+                              {number}
+                            </Button>
+                          ))}
+                          
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => paginate(currentPage + 1)}
+                            disabled={currentPage === totalPages}
+                          >
+                            Selanjutnya
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
         </main>
-      </SidebarInset>
 
-      {/* Reservasi Detail Modal */}
-      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Detail Reservasi</DialogTitle>
-            <DialogDescription>
-              Informasi lengkap data reservasi
-            </DialogDescription>
-          </DialogHeader>
-          {detailItem && (
-            <div className="space-y-4 py-2">
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">ID Reservasi</div>
-                <div className="col-span-2">{detailItem.id}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Acara</div>
-                <div className="col-span-2">{getAcaraName(detailItem.acara_id)}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Fasilitas</div>
-                <div className="col-span-2">{getFasilitasName(detailItem.fasilitas_id)}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Penyewa</div>
-                <div className="col-span-2">{getUserName(detailItem.user_id)}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Tanggal Reservasi</div>
-                <div className="col-span-2">{detailItem.tgl_reservasi}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Jam Mulai</div>
-                <div className="col-span-2">{formatTimeDisplay(detailItem.jam_mulai)}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Jam Selesai</div>
-                <div className="col-span-2">{formatTimeDisplay(detailItem.jam_selesai)}</div>
-              </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Harga</div>
-                <div className="col-span-2">
-                  {formatPrice(detailItem.harga || getFasilitasPrice(detailItem.fasilitas_id))}
+        {/* Detail Modal */}
+        <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>Detail Reservasi</DialogTitle>
+            </DialogHeader>
+            {detailItem && (
+              <div className="space-y-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Fasilitas</Label>
+                    <p className="text-sm text-gray-600 mt-1">{getFasilitasName(detailItem)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Acara</Label>
+                    <p className="text-sm text-gray-600 mt-1">{getAcaraName(detailItem)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">User</Label>
+                    <p className="text-sm text-gray-600 mt-1">{getUserName(detailItem)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Tanggal Reservasi</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {new Date(detailItem.tgl_reservasi).toLocaleDateString('id-ID', {
+                        weekday: 'long',
+                        year: 'numeric',
+                        month: 'long',
+                        day: 'numeric'
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Sesi</Label>
+                    <div className="text-sm text-gray-600 mt-1">
+                      <div>{getSesiNames(detailItem.sesi)}</div>
+                      <div className="text-xs text-gray-500">{getSesiTimes(detailItem.sesi)}</div>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Status</Label>
+                    <div className="mt-1">
+                      <Badge className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadgeClass(detailItem.status_reservasi)}`}>
+                        {getStatusIcon(detailItem.status_reservasi)}
+                        {detailItem.status_reservasi}
+                      </Badge>
+                    </div>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Harga Acara</Label>
+                    <p className="text-sm text-gray-600 mt-1">{formatRupiah(detailItem.acara?.harga)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Harga Fasilitas</Label>
+                    <p className="text-sm text-gray-600 mt-1">{formatRupiah(detailItem.fasilitas?.harga)}</p>
+                  </div>
+                  <div className="col-span-2">
+                    <Label className="text-sm font-medium text-gray-900">Total Harga</Label>
+                    <p className="text-lg font-semibold text-green-600 mt-1">{formatRupiah(detailItem.harga)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Dibuat Pada</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {new Date(detailItem.created_at).toLocaleString('id-ID')}
+                    </p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium text-gray-900">Terakhir Diupdate</Label>
+                    <p className="text-sm text-gray-600 mt-1">
+                      {new Date(detailItem.updated_at).toLocaleString('id-ID')}
+                    </p>
+                  </div>
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Status Pembayaran</div>
-                <div className="col-span-2">
-                  <span
-                    className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                      detailItem.status_pembayaran === "paid"
-                        ? "bg-green-100 text-green-700"
-                        : "bg-yellow-100 text-yellow-700"
-                    }`}
-                  >
-                    {detailItem.status_pembayaran}
-                  </span>
+            )}
+          </DialogContent>
+        </Dialog>
+
+        {/* Add/Edit Modal */}
+        <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>{isEditing ? "Edit Reservasi" : "Tambah Reservasi Baru"}</DialogTitle>
+              <DialogDescription>
+                {isEditing 
+                  ? "Perbarui informasi reservasi yang sudah ada."
+                  : "Isi formulir di bawah untuk membuat reservasi baru."
+                }
+              </DialogDescription>
+            </DialogHeader>
+            
+            {validationErrors.length > 0 && (
+              <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertDescription>
+                  <ul className="list-disc list-inside space-y-1">
+                    {validationErrors.map((error, index) => (
+                      <li key={index}>{error}</li>
+                    ))}
+                  </ul>
+                </AlertDescription>
+              </Alert>
+            )}
+
+            <div className="space-y-4">
+              {/* Acara Selection (only for new reservations) */}
+              {!isEditing && (
+                <div>
+                  <Label htmlFor="acara_id">Acara *</Label>
+                  <Select onValueChange={(value) => handleSelectChange("acara_id", value)} value={formData.acara_id}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih acara" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {acara.map(item => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.nama_acara} - {formatRupiah(item.harga)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Fasilitas Selection (only for new reservations) */}
+              {!isEditing && (
+                <div>
+                  <Label htmlFor="fasilitas_id">Fasilitas *</Label>
+                  <Select onValueChange={(value) => handleSelectChange("fasilitas_id", value)} value={formData.fasilitas_id}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih fasilitas" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {fasilitas.map(item => (
+                        <SelectItem key={item.id} value={item.id.toString()}>
+                          {item.nama_fasilitas} - {formatRupiah(item.harga)}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* User Selection (only for admin on new reservations) */}
+              {!isEditing && currentUser?.role === 'admin' && (
+                <div>
+                  <Label htmlFor="user_id">User</Label>
+                  <Select onValueChange={(value) => handleSelectChange("user_id", value)} value={formData.user_id}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih user (kosongkan untuk diri sendiri)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {users.map(user => (
+                        <SelectItem key={user.id} value={user.id.toString()}>
+                          {user.name} - {user.email}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Tanggal Reservasi */}
+              <div>
+                <Label htmlFor="tgl_reservasi">Tanggal Reservasi *</Label>
+                <Input
+                  type="date"
+                  id="tgl_reservasi"
+                  name="tgl_reservasi"
+                  value={formData.tgl_reservasi}
+                  onChange={handleInputChange}
+                  min={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+
+              {/* Sesi Selection */}
+              <div>
+                <Label>Sesi *</Label>
+                <div className="space-y-2 mt-2">
+                  {sesi.map(s => (
+                    <div key={s.id} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={`sesi-${s.id}`}
+                        checked={formData.sesi_id.includes(s.id.toString())}
+                        onCheckedChange={() => handleSesiChange(s.id)}
+                      />
+                      <Label htmlFor={`sesi-${s.id}`} className="text-sm">
+                        {s.nama_sesi} ({s.jam_mulai} - {s.jam_selesai})
+                      </Label>
+                    </div>
+                  ))}
                 </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Dibuat Pada</div>
-                <div className="col-span-2">{detailItem.created_at || "-"}</div>
+
+              {/* Status Selection (only for admin when editing) */}
+              {isEditing && currentUser?.role === 'admin' && (
+                <div>
+                  <Label htmlFor="status_reservasi">Status</Label>
+                  <Select onValueChange={(value) => handleSelectChange("status_reservasi", value)} value={formData.status_reservasi}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih status" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="disetujui">Disetujui</SelectItem>
+                      <SelectItem value="ditolak">Ditolak</SelectItem>
+                      <SelectItem value="menunggu lunas">Menunggu Lunas</SelectItem>
+                      <SelectItem value="siap digunakan">Siap Digunakan</SelectItem>
+                      <SelectItem value="sedang berlangsung">Sedang Berlangsung</SelectItem>
+                      <SelectItem value="selesai">Selesai</SelectItem>
+                      <SelectItem value="dibatalkan">Dibatalkan</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              {/* Price Preview (only for new reservations) */}
+              {!isEditing && pricePreview !== null && (
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <DollarSign className="h-5 w-5 text-green-600" />
+                    <Label className="text-sm font-medium text-green-800">Estimasi Total Harga</Label>
+                  </div>
+                  <p className="text-lg font-semibold text-green-700 mt-1">
+                    {formatRupiah(pricePreview)}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleFormSubmit} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    {isEditing ? "Menyimpan..." : "Menambah..."}
+                  </>
+                ) : (
+                  <>
+                    {isEditing ? "Simpan" : "Tambah"}
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Modal */}
+        <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Konfirmasi Hapus</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus reservasi ini? Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700"
+                disabled={isLoading}
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menghapus...
+                  </>
+                ) : (
+                  "Hapus"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+
+        {/* Status Confirmation Modal */}
+        <Dialog open={isConfirmModalOpen} onOpenChange={setIsConfirmModalOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Konfirmasi Status</DialogTitle>
+              <DialogDescription>
+                Ubah status reservasi untuk melanjutkan proses.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label className="text-sm font-medium text-gray-900">Status Saat Ini</Label>
+                <div className="mt-1">
+                  <Badge className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadgeClass(selectedItem?.status_reservasi)}`}>
+                    {getStatusIcon(selectedItem?.status_reservasi)}
+                    {selectedItem?.status_reservasi}
+                  </Badge>
+                </div>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-sm">
-                <div className="font-medium">Diperbarui Pada</div>
-                <div className="col-span-2">{detailItem.updated_at || "-"}</div>
+              
+              <div>
+                <Label htmlFor="new_status">Status Baru</Label>
+                <Select onValueChange={handleStatusChange} value={selectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih status baru" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disetujui">Disetujui</SelectItem>
+                    <SelectItem value="ditolak">Ditolak</SelectItem>
+                    <SelectItem value="menunggu lunas">Menunggu Lunas</SelectItem>
+                    <SelectItem value="siap digunakan">Siap Digunakan</SelectItem>
+                    <SelectItem value="sedang berlangsung">Sedang Berlangsung</SelectItem>
+                    <SelectItem value="selesai">Selesai</SelectItem>
+                    <SelectItem value="dibatalkan">Dibatalkan</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
-              Tutup
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
-      {/* Tambah/Edit Reservasi Modal */}
-<Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
-  <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-    <DialogHeader>
-      <DialogTitle>{isEditing ? "Edit Reservasi" : "Tambah Reservasi"}</DialogTitle>
-      <DialogDescription>
-        {isEditing ? "Perbarui data reservasi" : "Tambahkan data reservasi baru"}
-      </DialogDescription>
-    </DialogHeader>
-    <div className="space-y-4 py-2">
-      {/* Validation Errors */}
-      {validationErrors.length > 0 && (
-        <Alert variant="destructive" className="mb-4">
-          <AlertCircle className="h-4 w-4 mr-2" />
-          <AlertDescription>
-            <ul className="list-disc pl-5 space-y-1">
-              {validationErrors.map((error, index) => (
-                <li key={index}>{error}</li>
-              ))}
-            </ul>
-          </AlertDescription>
-        </Alert>
-      )}
-      
-      {/* Form Fields */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="acara_id">Acara</Label>
-          <Select
-            value={formData.acara_id ? formData.acara_id.toString() : ""}
-            onValueChange={(value) => handleInputChange({ target: { name: "acara_id", value } })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Pilih acara">
-                {formData.acara_id && acara.find(item => item.id.toString() === formData.acara_id.toString())?.nama_acara}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {acara.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>
-                  {item.nama_acara}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="fasilitas_id">Fasilitas</Label>
-          <Select
-            value={formData.fasilitas_id ? formData.fasilitas_id.toString() : ""}
-            onValueChange={(value) => handleInputChange({ target: { name: "fasilitas_id", value } })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Pilih fasilitas">
-                {formData.fasilitas_id && 
-                  fasilitas.find(item => item.id.toString() === formData.fasilitas_id.toString())?.nama_fasilitas + 
-                  " - " + 
-                  formatPrice(fasilitas.find(item => item.id.toString() === formData.fasilitas_id.toString())?.harga)}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {fasilitas.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>
-                  {item.nama_fasilitas} - {formatPrice(item.harga)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="user_id">Penyewa</Label>
-          <Select
-            value={formData.user_id ? formData.user_id.toString() : ""}
-            onValueChange={(value) => handleInputChange({ target: { name: "user_id", value } })}
-          >
-            <SelectTrigger>
-              <SelectValue placeholder="Pilih penyewa">
-                {formData.user_id && users.find(item => item.id.toString() === formData.user_id.toString())?.name}
-              </SelectValue>
-            </SelectTrigger>
-            <SelectContent>
-              {users.map((item) => (
-                <SelectItem key={item.id} value={item.id.toString()}>
-                  {item.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="tgl_reservasi">Tanggal Reservasi</Label>
-          <Input
-            type="date"
-            id="tgl_reservasi"
-            name="tgl_reservasi"
-            value={formData.tgl_reservasi}
-            onChange={handleInputChange}
-          />
-        </div>
-        
-        <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-2">
-            <Label htmlFor="jam_mulai">Jam Mulai</Label>
-            <Input
-              type="time"
-              id="jam_mulai"
-              name="jam_mulai"
-              value={formData.jam_mulai}
-              onChange={handleInputChange}
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="jam_selesai">Jam Selesai</Label>
-            <Input
-              type="time"
-              id="jam_selesai"
-              name="jam_selesai"
-              value={formData.jam_selesai}
-              onChange={handleInputChange}
-            />
-          </div>
-        </div>
-        
-        <div className="space-y-2">
-          <Label htmlFor="harga">Harga</Label>
-          <Input
-            type="text"
-            id="harga"
-            name="harga"
-            value={formData.harga}
-            onChange={handleInputChange}
-            disabled
-          />
-          <p className="text-sm text-gray-500">
-            Harga diatur otomatis berdasarkan fasilitas yang dipilih
-          </p>
-        </div>
-        
-        {isEditing && (
-          <div className="space-y-2">
-            <Label htmlFor="status_pembayaran">Status Pembayaran</Label>
-            <Select
-              value={formData.status_pembayaran || ""}
-              onValueChange={(value) => handleInputChange({ target: { name: "status_pembayaran", value } })}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Pilih status">
-                  {formData.status_pembayaran === "unpaid" && "Belum Dibayar"}
-                  {formData.status_pembayaran === "paid" && "Sudah Dibayar"}
-                </SelectValue>
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="unpaid">Belum Dibayar</SelectItem>
-                <SelectItem value="paid">Sudah Dibayar</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-    </div>
-    <DialogFooter>
-      <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
-        Batal
-      </Button>
-      <Button onClick={handleFormSubmit} disabled={isLoading}>
-        {isLoading ? (
-          <>
-            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            <span>Menyimpan...</span>
-          </>
-        ) : (
-          <span>{isEditing ? "Simpan Perubahan" : "Simpan"}</span>
-        )}
-      </Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
-      {/* Delete Confirmation Modal */}
-      <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Hapus Reservasi</AlertDialogTitle>
-            <AlertDialogDescription>
-              Apakah Anda yakin ingin menghapus data reservasi ini? Tindakan ini tidak dapat dibatalkan.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Batal</AlertDialogCancel>
-            <AlertDialogAction onClick={handleDelete} disabled={isLoading}>
-              {isLoading ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                  <span>Menghapus...</span>
-                </>
-              ) : (
-                <span>Hapus</span>
-              )}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsConfirmModalOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleConfirm} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Konfirmasi"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </SidebarInset>
     </SidebarProvider>
   )
 }

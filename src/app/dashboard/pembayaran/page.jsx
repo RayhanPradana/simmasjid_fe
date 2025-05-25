@@ -27,15 +27,38 @@ import {
   User,
   Building,
   Clock,
+  CheckCircle,
+  XCircle,
+  Clock4,
+  FileText,
+  CreditCard as PaymentIcon,
+  CalendarCheck,
+  Banknote,
+  Upload,
+  Info, 
+  Edit,
+  Trash2,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Dialog, DialogContent, DialogFooter, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { 
+  AlertDialog,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog"
 
 // API base URLs
 const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
@@ -45,27 +68,47 @@ export default function Page() {
   const [filteredPayments, setFilteredPayments] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false)
+  const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false)
+  const [isPaymentModalOpen, setIsPaymentModalOpen] = useState(false)
   const [detailItem, setDetailItem] = useState(null)
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
+  const [currentTab, setCurrentTab] = useState("all")
+  const [userRole, setUserRole] = useState(null)
+  const [verificationStatus, setVerificationStatus] = useState("paid")
+  const [paymentMethod, setPaymentMethod] = useState("transfer")
+  const [paymentType, setPaymentType] = useState("dp")
+  const [selectedFile, setSelectedFile] = useState(null)
+  const [filePreview, setFilePreview] = useState(null)
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false)
+  const [selectedItemId, setSelectedItemId] = useState(null)
   
   const itemsPerPage = 5
+
+  // Update paymentData state
+  const [paymentData, setPaymentData] = useState({
+    reservasi_fasilitas_id: '',
+    jenis: 'dp',
+    metode_pembayaran: 'transfer',
+    jumlah_pembayaran: 0, // Add this field
+    bukti_transfer: null
+  });
+
+  // Price details state
+  const [priceDetails, setPriceDetails] = useState({
+    totalPrice: 0,
+    dpAmount: 0,
+    remainingAmount: 0
+  });
 
   // Format date for display
   const formatDate = (dateString) => {
     if (!dateString) return "-"
     
     try {
-      // Check if dateString contains time component
-      const hasTime = dateString.includes('T') || dateString.includes(' ')
-      
-      // Parse the date string
       const date = new Date(dateString)
-      
-      // Check if date is valid
       if (isNaN(date.getTime())) return dateString
       
-      // Format the date to DD-MM-YYYY
       return date.toLocaleDateString('id-ID', {
         day: '2-digit',
         month: '2-digit',
@@ -90,6 +133,12 @@ export default function Page() {
     return token
   }
 
+  // Get user role from localStorage
+  useEffect(() => {
+    const user = JSON.parse(localStorage.getItem("user") || "{}")
+    setUserRole(user.role || "user")
+  }, [])
+
   // Format currency
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "-"
@@ -106,18 +155,72 @@ export default function Page() {
     
     const statusLower = status.toLowerCase()
     let variant = "outline"
+    let icon = null
     
-    if (statusLower === "sukses") {
+    if (statusLower === "paid") {
       variant = "success"
+      icon = <CheckCircle className="h-3 w-3 mr-1" />
     } else if (statusLower === "pending") {
       variant = "warning"
-    } else if (statusLower === "gagal") {
+      icon = <Clock4 className="h-3 w-3 mr-1" />
+    } else if (statusLower === "belum lunas") {
+      variant = "warning" 
+      icon = <AlertCircle className="h-3 w-3 mr-1" />
+    } else if (statusLower === "unpaid") {
       variant = "destructive"
+      icon = <XCircle className="h-3 w-3 mr-1" />
     }
     
     return (
-      <Badge variant={variant} className="capitalize">
-        {status}
+      <Badge variant={variant} className="capitalize flex items-center text-xs">
+        {icon}
+        {status === "paid" ? "Dibayar" : 
+         status === "pending" ? "Pending" :
+         status === "belum lunas" ? "Belum Lunas" :
+         "Belum Dibayar"}
+      </Badge>
+    )
+  }
+
+  // Get payment type badge
+  const getPaymentTypeBadge = (type) => {
+    if (!type) return null
+    
+    const typeLower = type.toLowerCase()
+    let variant = "outline"
+    
+    switch(typeLower) {
+      case "dp":
+        variant = "warning"
+        return <Badge variant={variant}>DP</Badge>
+      case "pelunasan":
+        variant = "info"
+        return <Badge variant={variant}>Pelunasan</Badge>
+      case "lunas":
+        variant = "success"
+        return <Badge variant={variant}>Lunas</Badge>
+      default:
+        return <Badge variant={variant}>{type}</Badge>
+    }
+  }
+
+  // Get payment method badge
+  const getPaymentMethodBadge = (method) => {
+    if (!method) return null
+    
+    const methodLower = method.toLowerCase()
+    let icon = null
+    
+    if (methodLower === "transfer") {
+      icon = <Banknote className="h-3 w-3 mr-1" />
+    } else if (methodLower === "tunai") {
+      icon = <CreditCard className="h-3 w-3 mr-1" />
+    }
+    
+    return (
+      <Badge variant="outline" className="capitalize flex items-center text-xs">
+        {icon}
+        {method}
       </Badge>
     )
   }
@@ -152,27 +255,17 @@ export default function Page() {
 
       const result = await response.json()
       
-      // Process payment data
+      // The controller returns the data directly as an array
       let paymentData = []
       
-      if (result && Array.isArray(result.data)) {
-        paymentData = result.data
-      } else if (Array.isArray(result)) {
+      if (Array.isArray(result)) {
         paymentData = result
-      } else if (result.data && typeof result.data === 'object') {
-        // Handle nested data object
-        const dataValues = Object.values(result.data)
-        if (Array.isArray(dataValues) && dataValues.length > 0) {
-          if (Array.isArray(dataValues[0])) {
-            paymentData = dataValues[0]
-          } else {
-            paymentData = dataValues
-          }
-        }
+      } else if (result && Array.isArray(result.data)) {
+        paymentData = result.data
       }
       
       setPayments(paymentData)
-      setFilteredPayments(paymentData)
+      filterPaymentsByTab(paymentData, currentTab)
       
     } catch (error) {
       console.error("Failed to fetch payments:", error)
@@ -188,44 +281,224 @@ export default function Page() {
     }
   }
 
+  // Filter payments by tab and search term
+  const filterPaymentsByTab = (paymentsData, tabValue) => {
+    if (!paymentsData.length) return
+    
+    let filtered = [...paymentsData]
+    
+    // Filter by tab
+    if (tabValue !== "all") {
+      filtered = filtered.filter(item => {
+        if (tabValue === "pending") return item.status?.toLowerCase() === "pending"
+        if (tabValue === "paid") return item.status?.toLowerCase() === "paid"
+        if (tabValue === "unpaid") return item.status?.toLowerCase() === "unpaid"
+        if (tabValue === "belum lunas") return item.status?.toLowerCase() === "belum lunas"
+        if (tabValue === "dp") return item.jenis?.toLowerCase() === "dp"
+        if (tabValue === "lunas") return item.jenis?.toLowerCase() === "lunas"
+        return true
+      })
+    }
+    
+    // Then filter by search term
+    if (searchTerm) {
+      filtered = filtered.filter(item => {
+        const reservasiId = item.reservasi_fasilitas_id ? item.reservasi_fasilitas_id.toString().toLowerCase() : ""
+        const status = item.status ? item.status.toLowerCase() : ""
+        const jenis = item.jenis ? item.jenis.toLowerCase() : ""
+        const metode = item.metode_pembayaran ? item.metode_pembayaran.toLowerCase() : ""
+        
+        // Search in reservation data if available
+        let reservasiData = ""
+        if (item.reservasi) {
+          const reservasi = item.reservasi
+          const penyewaName = reservasi.nama || reservasi.nama || ""
+          reservasiData = `${reservasi.id || ""} ${reservasi.tgl_reservasi || ""} ${penyewaName}`.toLowerCase()
+        }
+        
+        const searchLower = searchTerm.toLowerCase()
+        
+        return (
+          reservasiId.includes(searchLower) ||
+          status.includes(searchLower) ||
+          jenis.includes(searchLower) ||
+          metode.includes(searchLower) ||
+          reservasiData.includes(searchLower)
+        )
+      })
+    }
+    
+    setFilteredPayments(filtered)
+    setCurrentPage(1)
+  }
+
   // Handle detail view
   const handleDetails = (item) => {
     setDetailItem(item)
     setIsDetailModalOpen(true)
   }
 
+  // Handle verification modal (admin only)
+  const handleVerificationModal = (item) => {
+    setDetailItem(item)
+    setVerificationStatus("paid") // Reset to default
+    setIsVerificationModalOpen(true)
+  }
+
+  // Handle payment modal for lunas payment
+  const handlePaymentModal = (item) => {
+    setDetailItem(item);
+    const totalPrice = getPrice(item);
+    setPriceDetails({
+      totalPrice,
+      dpAmount: totalPrice * 0.3,
+      remainingAmount: totalPrice * 0.7
+    });
+    setPaymentType("lunas")
+    setPaymentMethod("transfer")
+    setSelectedFile(null)
+    setFilePreview(null)
+    setIsPaymentModalOpen(true)
+  }
+
+  // Submit verification status (admin only)
+  const handleSubmitVerification = async () => {
+    setIsLoading(true);
+    try {
+      const token = getToken();
+      if (!token) return;
+
+      const response = await fetch(`${API_BASE_URL}/${detailItem.id}`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          status: verificationStatus,
+          // Include payment amount if needed
+          jumlah_pembayaran: detailItem.jumlah_pembayaran,
+          // Update reservation status based on payment type and verification
+          update_reservation: true,
+          reservation_status: verificationStatus === 'paid' 
+            ? (detailItem.jenis === 'dp' ? 'menunggu_lunas' : 
+               detailItem.jenis === 'pelunasan' ? 'siap_digunakan' : 'siap_digunakan')
+            : 'pending'
+        })
+      });
+
+      if (!response.ok) throw new Error(`HTTP error ${response.status}`);
+
+      toast({
+        title: "Berhasil",
+        description: `Pembayaran ${detailItem.jenis === 'dp' ? 'DP' : 'pelunasan'} berhasil diverifikasi`
+      });
+
+      fetchPayments();
+      setIsVerificationModalOpen(false);
+
+    } catch (error) {
+      console.error("Verification failed:", error);
+      toast({
+        title: "Error",
+        description: "Gagal memverifikasi pembayaran",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }
+
+  // Submit lunas payment
+  const handleSubmitPayment = async (e) => {
+    e.preventDefault();
+    
+    try {
+      const token = localStorage.getItem("token");
+      const formData = new FormData();
+      
+      // Calculate payment amount based on type
+      const amount = paymentType === 'dp' 
+        ? priceDetails.dpAmount      // 30% for DP
+        : priceDetails.totalPrice;   // 100% for full payment
+
+      // Set payment type (only dp or lunas as per controller)
+      const paymentJenis = paymentType === 'dp' ? 'dp' : 'lunas';
+
+      // Append form data matching controller validation
+      formData.append('reservasi_fasilitas_id', paymentData.reservasi_fasilitas_id);
+      formData.append('jenis', paymentJenis);
+      formData.append('metode_pembayaran', paymentData.metode_pembayaran);
+      formData.append('jumlah_pembayaran', amount);
+
+      // Only append bukti_transfer if method is transfer and file exists
+      if (paymentData.metode_pembayaran === 'transfer' && paymentData.bukti_transfer) {
+        formData.append('bukti_transfer', paymentData.bukti_transfer);
+      }
+
+      // Debug logging
+      console.log('Sending payment data:', {
+        reservasi_fasilitas_id: paymentData.reservasi_fasilitas_id,
+        jenis: paymentJenis,
+        metode_pembayaran: paymentData.metode_pembayaran,
+        jumlah_pembayaran: amount,
+        bukti_transfer: paymentData.bukti_transfer ? 'File present' : 'No file'
+      });
+
+      const response = await fetch(API_BASE_URL, {
+        method: "POST",
+        headers: {
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || `HTTP error! status: ${response.status}`);
+      }
+
+      toast.success(result.message || "Pembayaran berhasil dikirim");
+      
+      // Clear localStorage and redirect
+      localStorage.removeItem("pendingPaymentReservationId");
+      localStorage.removeItem("paymentType");
+      router.push('/landing-page/riwayat');
+
+    } catch (error) {
+      console.error("Payment failed:", error);
+      toast.error(error.message || "Gagal melakukan pembayaran");
+    }
+  }
+
+  // Handle file selection
+  const handleFileChange = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setSelectedFile(file)
+      
+      // Create preview URL
+      const reader = new FileReader()
+      reader.onloadend = () => {
+        setFilePreview(reader.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Handle tab change
+  const handleTabChange = (value) => {
+    setCurrentTab(value)
+    filterPaymentsByTab(payments, value)
+  }
+
   // Handle search
   useEffect(() => {
-    if (!payments.length) return
-    
-    const filtered = payments.filter(item => {
-      // Get all searchable fields (include nested reservasi data)
-      const reservasiId = item.reservasi_id ? item.reservasi_id.toString().toLowerCase() : ""
-      const userId = item.user_id ? item.user_id.toString().toLowerCase() : ""
-      const status = item.status ? item.status.toLowerCase() : ""
-      
-      // Search in reservasi data if available
-      let reservasiData = ""
-      if (item.reservasi) {
-        const reservasi = item.reservasi
-        // Add any relevant reservasi fields for searching
-        reservasiData = `${reservasi.id || ""} ${reservasi.tgl_reservasi || ""} ${reservasi.status || ""}`
-        reservasiData = reservasiData.toLowerCase()
-      }
-      
-      const searchLower = searchTerm.toLowerCase()
-      
-      return (
-        reservasiId.includes(searchLower) ||
-        userId.includes(searchLower) ||
-        status.includes(searchLower) ||
-        reservasiData.includes(searchLower)
-      )
-    })
-    
-    setFilteredPayments(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, payments])
+    filterPaymentsByTab(payments, currentTab)
+  }, [searchTerm, payments, currentTab])
 
   // Load data when component mounts
   useEffect(() => {
@@ -244,18 +517,154 @@ export default function Page() {
   const getReservasiDate = (item) => {
     if (!item) return "-"
     
-    // First try to get date from the reservasi relationship
+    // Get date from the reservasi relationship
     if (item.reservasi && item.reservasi.tgl_reservasi) {
       return formatDate(item.reservasi.tgl_reservasi)
     }
     
-    // Fallback to direct tanggal_reservasi if available
-    if (item.tanggal_reservasi) {
-      return formatDate(item.tanggal_reservasi)
-    }
-    
     return "-"
   }
+
+  // Get penyewa name from reservasi
+  const getPenyewaName = (item) => {
+    if (!item || !item.reservasi) return "-"
+    
+    const reservasi = item.reservasi
+    
+    // Try different possible paths to get user name
+    return reservasi.penyewa?.nama || // if penyewa object exists
+           reservasi.user?.nama ||     // if user object exists
+           reservasi.nama_penyewa ||   // if direct field exists
+           reservasi.nama ||           // fallback to nama
+           "-"                         // default if no name found
+  }
+
+  // Get price from reservasi
+  const getPrice = (item) => {
+    if (!item || !item.reservasi) return 0
+    
+    return item.reservasi.total_harga || 
+           item.reservasi.harga || 
+           item.reservasi.biaya || 
+           0
+  }
+
+  // Determine if admin can update payment status
+  const canUpdatePayment = (item) => {
+    return userRole === "admin"
+  }
+
+  // Determine if can make full payment (only for DP payments that are already paid)
+  const canMakeFullPayment = (item) => {
+    return item.jenis?.toLowerCase() === "dp" && 
+           item.status?.toLowerCase() === "paid" && 
+           userRole !== "admin"
+  }
+
+  // Update the table row status cell to use consistent styling
+  const StatusCell = ({ status }) => {
+    const statusLower = status?.toLowerCase()
+    let variant = "outline"
+    let icon = null
+    let label = status
+    let bgColor = "bg-gray-50"
+    let textColor = "text-gray-700"
+
+    switch (statusLower) {
+      case "paid":
+        variant = "success"
+        icon = <CheckCircle className="h-3 w-3 mr-1" />
+        label = "Dibayar"
+        bgColor = "bg-green-50"
+        textColor = "text-green-700"
+        break
+      case "pending":
+        variant = "warning"
+        icon = <Clock4 className="h-3 w-3 mr-1" />
+        label = "Pending"
+        bgColor = "bg-yellow-50"
+        textColor = "text-yellow-700"
+        break
+      case "belum lunas":
+        variant = "warning"
+        icon = <AlertCircle className="h-3 w-3 mr-1" />
+        label = "Belum Lunas"
+        bgColor = "bg-orange-50"
+        textColor = "text-orange-700"
+        break
+      case "unpaid":
+        variant = "destructive"
+        icon = <XCircle className="h-3 w-3 mr-1" />
+        label = "Belum Dibayar"
+        bgColor = "bg-red-50"
+        textColor = "text-red-700"
+        break
+    }
+
+    return (
+      <div className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${bgColor} ${textColor}`}>
+        {icon}
+        {label}
+      </div>
+    )
+  }
+
+  // Delete handler
+  const handleDelete = async () => {
+    if (!selectedItemId) return
+    
+    setIsLoading(true)
+    try {
+      const token = getToken()
+      if (!token) return
+
+      const response = await fetch(`${API_BASE_URL}/${selectedItemId}`, {
+        method: "DELETE",
+        headers: {
+          "Authorization": `Bearer ${token}`,
+        }
+      })
+
+      if (!response.ok) {
+        throw new Error(`HTTP error ${response.status}`)
+      }
+
+      toast({
+        title: "Berhasil",
+        description: "Data pembayaran berhasil dihapus",
+      })
+      
+      fetchPayments()
+      setIsDeleteModalOpen(false)
+      
+    } catch (error) {
+      console.error("Failed to delete payment:", error)
+      toast({
+        title: "Error",
+        description: `Gagal menghapus data: ${error.message}`,
+        variant: "destructive",
+      })
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Update getPaymentOptions function
+  const getPaymentOptions = () => {
+    // Only show dp or lunas options
+    return (
+      <select
+        name="jenis"
+        value={paymentType}
+        onChange={(e) => setPaymentType(e.target.value)}
+        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+        required
+      >
+        <option value="dp">DP (30%)</option>
+        <option value="lunas">Lunas (100%)</option>
+      </select>
+    );
+  };
 
   return (
     <SidebarProvider>
@@ -301,12 +710,25 @@ export default function Page() {
                 </div>
               </CardHeader>
               <CardContent>
+                {/* Tabs */}
+                <Tabs defaultValue="all" value={currentTab} onValueChange={handleTabChange} className="mb-4">
+                  <TabsList className="grid grid-cols-3 md:grid-cols-7 w-full">
+                    <TabsTrigger value="all">Semua</TabsTrigger>
+                    <TabsTrigger value="pending">Pending</TabsTrigger>
+                    <TabsTrigger value="paid">Dibayar</TabsTrigger>
+                    <TabsTrigger value="belum lunas">Belum Lunas</TabsTrigger>
+                    <TabsTrigger value="unpaid">Belum Dibayar</TabsTrigger>
+                    <TabsTrigger value="dp">DP</TabsTrigger>
+                    <TabsTrigger value="lunas">Lunas</TabsTrigger>
+                  </TabsList>
+                </Tabs>
+
                 {/* Pencarian */}
                 <div className="flex items-center mb-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
-                      placeholder="Cari ID reservasi..."
+                      placeholder="Cari berdasarkan nama penyewa, ID reservasi..."
                       className="pl-10 w-full"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
@@ -314,25 +736,29 @@ export default function Page() {
                   </div>
                 </div>
 
-                {/* Tabel Data - Simplified */}
+                {/* Tabel Data */}
                 <div className="rounded-md border overflow-auto">
                   <table className="min-w-full divide-y divide-gray-200">
-                    {/* Header Tabel - Simplified */}
+                    {/* Header Tabel */}
                     <thead>
                       <tr className="bg-gray-50">
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Reservasi</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Reservasi</th>
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Pembayaran</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Penyewa</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Pembayaran</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                          Jumlah Pembayaran
+                        </th>
+                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status Pembayaran</th>
                         <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Aksi</th>
                       </tr>
                     </thead>
-                    {/* Body Tabel - Simplified */}
+                    {/* Body Tabel */}
                     <tbody className="bg-white divide-y divide-gray-200">
                       {isLoading ? (
                         <tr>
-                          <td colSpan="6" className="px-4 py-6 text-center text-sm text-gray-500">
+                          <td colSpan="8" className="px-4 py-6 text-center text-sm text-gray-500">
                             <div className="text-center py-10 text-gray-500">
                                 <div className="flex justify-center mb-2">
                                     <Loader2 className="h-6 w-6 animate-spin" />
@@ -344,25 +770,60 @@ export default function Page() {
                       ) : currentItems.length > 0 ? (
                         currentItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.id}</td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{item.reservasi_id}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">#{item.reservasi_fasilitas_id}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{getReservasiDate(item)}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{getPenyewaName(item)}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {item.tanggal_pembayaran ? formatDate(item.tanggal_pembayaran) : "-"}
+                              {getPaymentTypeBadge(item.jenis)}
                             </td>
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{formatCurrency(item.jumlah)}</td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium text-green-600">
+                              {formatCurrency(getPrice(item))}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium text-green-600">
+                              {formatCurrency(item.jumlah_pembayaran)}
+                            </td>
+                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
+                              <StatusCell status={item.status} />
+                            </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end space-x-2">
-                                <Button variant="outline" size="icon" onClick={() => handleDetails(item)} title="Lihat Detail">
+                                <Button variant="ghost" size="icon" onClick={() => handleDetails(item)} title="Lihat Detail">
                                   <Eye className="h-4 w-4" />
                                 </Button>
+                                
+                                {canUpdatePayment(item) && (
+                                  <>
+                                    <Button variant="ghost" size="icon" 
+                                      onClick={() => handleVerificationModal(item)} 
+                                      title="Update Status Pembayaran">
+                                      <Edit className="h-4 w-4 text-blue-600" />
+                                    </Button>
+
+                                    <Button variant="ghost" size="icon"
+                                      onClick={() => {
+                                        setSelectedItemId(item.id)
+                                        setIsDeleteModalOpen(true)
+                                      }}
+                                      title="Hapus Pembayaran">
+                                      <Trash2 className="h-4 w-4 text-red-600" />
+                                    </Button>
+                                  </>
+                                )}
+                                
+                                {canMakeFullPayment(item) && (
+                                  <Button variant="ghost" size="icon"
+                                    onClick={() => handlePaymentModal(item)} 
+                                    title="Bayar Lunas">
+                                    <Banknote className="h-4 w-4 text-green-600" />
+                                  </Button>
+                                )}
                               </div>
                             </td>
                           </tr>
                         ))
                       ) : (
                         <tr>
-                          <td colSpan="6" className="px-4 py-6 text-center text-sm text-gray-500">
+                          <td colSpan="8" className="px-4 py-6 text-center text-sm text-gray-500">
                             <div className="text-center py-10 text-gray-500">
                               <div className="flex justify-center mb-2">
                                 <Search className="h-6 w-6" />
@@ -392,16 +853,31 @@ export default function Page() {
                       >
                         Sebelumnya
                       </Button>
-                      {Array.from({ length: totalPages }, (_, i) => i + 1).map((number) => (
-                        <Button
-                          key={number}
-                          variant={currentPage === number ? "default" : "outline"}
-                          size="sm"
-                          onClick={() => paginate(number)}
-                        >
-                          {number}
-                        </Button>
-                      ))}
+                      {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                        const pageNum = i + 1
+                        const showPage = pageNum <= 2 || pageNum > totalPages - 2 || Math.abs(pageNum - currentPage) <= 1
+                        
+                        if (!showPage && pageNum === 3 && currentPage > 4) return (
+                          <span key="ellipsis-1" className="px-2 py-2">...</span>
+                        )
+                        
+                        if (!showPage && pageNum === totalPages - 2 && currentPage < totalPages - 3) return (
+                          <span key="ellipsis-2" className="px-2 py-2">...</span>
+                        )
+                        
+                        if (!showPage) return null
+                        
+                        return (
+                          <Button
+                            key={pageNum}
+                            variant={currentPage === pageNum ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => paginate(pageNum)}
+                          >
+                            {pageNum}
+                          </Button>
+                        )
+                      })}
                       <Button
                         variant="outline"
                         size="sm"
@@ -426,6 +902,14 @@ export default function Page() {
             </DialogHeader>
             {detailItem && (
               <div className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <h3 className="text-sm font-semibold">Status Pembayaran</h3>
+                  <div className="flex gap-2 items-center">
+                  <StatusCell status={detailItem.status} />
+                  </div>
+                </div>
+                <Separator />
+                
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">ID Pembayaran</Label>
@@ -433,16 +917,16 @@ export default function Page() {
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">ID Reservasi</Label>
-                    <p className="text-sm font-medium">{detailItem.reservasi_id}</p>
+                    <p className="text-sm font-medium">#{detailItem.reservasi_fasilitas_id}</p>
                   </div>
                 </div>
                 
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">
-                      <User className="h-4 w-4 inline mr-1" /> User ID
+                      <User className="h-4 w-4 inline mr-1" /> Nama Penyewa
                     </Label>
-                    <p className="text-sm font-medium">{detailItem.user_id || "-"}</p>
+                    <p className="text-sm font-medium">{getPenyewaName(detailItem)}</p>
                   </div>
                   <div>
                     <Label className="text-sm font-medium text-gray-500">
@@ -455,122 +939,339 @@ export default function Page() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">
-                      <Calendar className="h-4 w-4 inline mr-1" /> Tanggal Pembayaran
+                      <PaymentIcon className="h-4 w-4 inline mr-1" /> Jenis Pembayaran
                     </Label>
-                    <p className="text-sm font-medium">
-                      {detailItem.tanggal_pembayaran ? formatDate(detailItem.tanggal_pembayaran) : "-"}
-                    </p>
+                    <p className="text-sm font-medium">{getPaymentTypeBadge(detailItem.jenis)}</p>
                   </div>
+                <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <Banknote className="h-4 w-4 inline mr-1" /> Total Harga
+                    </Label>
+                    <p className="text-sm font-medium text-green-600">{formatCurrency(getPrice(detailItem))}</p>
+                  </div>
+                </div>
+                
+                {detailItem.metode_pembayaran && (
                   <div>
                     <Label className="text-sm font-medium text-gray-500">
-                      <CreditCard className="h-4 w-4 inline mr-1" /> Jumlah
+                      <CreditCard className="h-4 w-4 inline mr-1" /> Metode Pembayaran
                     </Label>
-                    <p className="text-sm font-medium">{formatCurrency(detailItem.jumlah)}</p>
+                    <p className="text-sm font-medium">{getPaymentMethodBadge(detailItem.metode_pembayaran)}</p>
                   </div>
-                </div>
+                )}
                 
-                <div>
-                  <Label className="text-sm font-medium text-gray-500">Status Pembayaran</Label>
-                  <p className="text-sm font-medium mt-1">{getStatusBadge(detailItem.status)}</p>
-                </div>
+                {detailItem.tgl_pembayaran && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <CalendarCheck className="h-4 w-4 inline mr-1" /> Tanggal Pembayaran
+                    </Label>
+                    <p className="text-sm font-medium">{formatDate(detailItem.tgl_pembayaran)}</p>
+                  </div>
+                )}
                 
-                {/* Data dari relasi reservasi */}
-                {detailItem.reservasi && (
-                  <div className="border-t pt-4 mt-4">
-                    <Label className="text-sm font-medium text-gray-700 mb-2 block">Informasi Reservasi</Label>
-                    
-                    <div className="grid grid-cols-2 gap-x-4 gap-y-2">
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">ID Reservasi</Label>
-                        <p className="text-sm">{detailItem.reservasi.id}</p>
+                {detailItem.bukti_transfer && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <FileText className="h-4 w-4 inline mr-1" /> Bukti Transfer
+                    </Label>
+                    <div className="mt-2">
+                      <img 
+                        src={detailItem.bukti_transfer} 
+                        alt="Bukti Transfer" 
+                        className="max-w-full h-auto max-h-48 rounded border"
+                        onError={(e) => {
+                          e.target.style.display = 'none'
+                          e.target.nextSibling.style.display = 'block'
+                        }}
+                      />
+                      <div className="hidden p-4 border rounded bg-gray-50 text-center">
+                        <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm text-gray-500">File tidak dapat ditampilkan</p>
                       </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">
-                          <Building className="h-4 w-4 inline mr-1" /> Fasilitas
-                        </Label>
-                        <p className="text-sm">
-                          {detailItem.reservasi.fasilitas?.nama_fasilitas || 
-                           (detailItem.reservasi.fasilitas_id ? `ID: ${detailItem.reservasi.fasilitas_id}` : '-')}
-                        </p>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">
-                          <Calendar className="h-4 w-4 inline mr-1" /> Tanggal Reservasi
-                        </Label>
-                        <p className="text-sm">{formatDate(detailItem.reservasi.tgl_reservasi)}</p>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">
-                          <Clock className="h-4 w-4 inline mr-1" /> Jam Mulai
-                        </Label>
-                        <p className="text-sm">{detailItem.reservasi.jam_mulai || '-'}</p>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">
-                          <Clock className="h-4 w-4 inline mr-1" /> Jam Selesai
-                        </Label>
-                        <p className="text-sm">{detailItem.reservasi.jam_selesai || '-'}</p>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">Status Reservasi</Label>
-                        <p className="text-sm">
-                          {detailItem.reservasi.status ? (
-                            <Badge variant={
-                              detailItem.reservasi.status.toLowerCase() === 'approved' ? 'success' :
-                              detailItem.reservasi.status.toLowerCase() === 'pending' ? 'warning' :
-                              detailItem.reservasi.status.toLowerCase() === 'rejected' ? 'destructive' : 'outline'
-                            } className="capitalize">
-                              {detailItem.reservasi.status}
-                            </Badge>
-                          ) : '-'}
-                        </p>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">Dibuat Pada</Label>
-                        <p className="text-sm">{formatDate(detailItem.reservasi.created_at)}</p>
-                      </div>
-                      
-                      <div className="mb-2">
-                        <Label className="text-sm font-medium text-gray-500">Diupdate Pada</Label>
-                        <p className="text-sm">{formatDate(detailItem.reservasi.updated_at)}</p>
-                      </div>
-                      
-                      {detailItem.reservasi.keterangan && (
-                        <div className="col-span-2 mb-2">
-                          <Label className="text-sm font-medium text-gray-500">Keterangan</Label>
-                          <p className="text-sm">{detailItem.reservasi.keterangan}</p>
-                        </div>
-                      )}
                     </div>
                   </div>
                 )}
                 
-                {!detailItem.reservasi && (
-                  <Alert className="border-amber-400 bg-amber-50 text-amber-900">
-                    <AlertCircle className="h-4 w-4" />
+                {detailItem.catatan && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <Info className="h-4 w-4 inline mr-1" /> Catatan
+                    </Label>
+                    <p className="text-sm">{detailItem.catatan}</p>
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <CreditCard className="h-4 w-4 inline mr-1" /> Jumlah Pembayaran
+                    </Label>
+                    <p className="text-sm font-medium text-green-600">
+                      {formatCurrency(detailItem.jumlah_pembayaran)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
+                Tutup
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Verification Modal (Admin Only) */}
+        <Dialog open={isVerificationModalOpen} onOpenChange={setIsVerificationModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Update Status Pembayaran</DialogTitle>
+              <DialogDescription>
+                Ubah status pembayaran untuk ID Reservasi #{detailItem?.reservasi_fasilitas_id}
+              </DialogDescription>
+            </DialogHeader>
+            {detailItem && (
+              <div className="space-y-4">
+                <div className="grid gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Nama Penyewa</Label>
+                    <p className="text-sm text-gray-600">{getPenyewaName(detailItem)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Jenis Pembayaran</Label>
+                    <p className="text-sm text-gray-600">{getPaymentTypeBadge(detailItem.jenis)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Status Saat Ini</Label>
+                    <div className="mt-1">{getStatusBadge(detailItem.status)}</div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-2">
+                  <Label htmlFor="verification-status">Status Baru</Label>
+                  <Select value={verificationStatus} onValueChange={setVerificationStatus}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Pilih status pembayaran" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="paid">
+                        <div className="flex items-center">
+                          <CheckCircle className="h-4 w-4 mr-2 text-green-600" />
+                          Dibayar
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="pending">
+                        <div className="flex items-center">
+                          <Clock4 className="h-4 w-4 mr-2 text-yellow-600" />
+                          Pending
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="belum lunas">
+                        <div className="flex items-center">
+                          <AlertCircle className="h-4 w-4 mr-2 text-orange-600" />
+                          Belum Lunas
+                        </div>
+                      </SelectItem>
+                      <SelectItem value="unpaid">
+                        <div className="flex items-center">
+                          <XCircle className="h-4 w-4 mr-2 text-red-600" />
+                          Belum Dibayar
+                        </div>
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                {verificationStatus === "paid" && (
+                  <Alert>
+                    <CheckCircle className="h-4 w-4" />
+                    <AlertTitle>Konfirmasi Pembayaran</AlertTitle>
                     <AlertDescription>
-                      Data reservasi tidak tersedia
+                      Status akan diubah menjadi "Dibayar". Pastikan pembayaran sudah diterima.
+                    </AlertDescription>
+                  </Alert>
+                )}
+                
+                {verificationStatus === "unpaid" && (
+                  <Alert variant="destructive">
+                    <XCircle className="h-4 w-4" />
+                    <AlertTitle>Perhatian</AlertTitle>
+                    <AlertDescription>
+                      Status akan diubah menjadi "Belum Dibayar". Ini akan membatalkan verifikasi pembayaran.
                     </AlertDescription>
                   </Alert>
                 )}
               </div>
             )}
             <DialogFooter>
-              <Button 
-                variant="outline" 
-                onClick={() => setIsDetailModalOpen(false)}
-              >
-                Tutup
+              <Button variant="outline" onClick={() => setIsVerificationModalOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleSubmitVerification} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Memproses...
+                  </>
+                ) : (
+                  "Update Status"
+                )}
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Payment Modal for Lunas */}
+        <Dialog open={isPaymentModalOpen} onOpenChange={setIsPaymentModalOpen}>
+          <DialogContent className="sm:max-w-lg">
+            <DialogHeader>
+              <DialogTitle>Pembayaran Lunas</DialogTitle>
+              <DialogDescription>
+                Lakukan pembayaran lunas untuk reservasi #{detailItem?.reservasi_fasilitas_id}
+              </DialogDescription>
+            </DialogHeader>
+            {detailItem && (
+              <div className="space-y-4">
+                <div className="grid gap-4">
+                  <div>
+                    <Label className="text-sm font-medium">Nama Penyewa</Label>
+                    <p className="text-sm text-gray-600">{getPenyewaName(detailItem)}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Total Harga</Label>
+                    <p className="text-sm font-medium text-green-600">{formatCurrency(getPrice(detailItem))}</p>
+                  </div>
+                  <div>
+                    <Label className="text-sm font-medium">Status DP</Label>
+                    <div className="mt-1">{getStatusBadge(detailItem.status)}</div>
+                  </div>
+                </div>
+                
+                <Separator />
+                
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="payment-method">Metode Pembayaran</Label>
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Pilih metode pembayaran" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="transfer">
+                          <div className="flex items-center">
+                            <Banknote className="h-4 w-4 mr-2" />
+                            Transfer Bank
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="tunai">
+                          <div className="flex items-center">
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Tunai
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  {paymentMethod === "transfer" && (
+                    <div className="space-y-2">
+                      <Label htmlFor="bukti-transfer">Bukti Transfer</Label>
+                      <div className="space-y-2">
+                        <Input
+                          id="bukti-transfer"
+                          type="file"
+                          accept="image/*"
+                          onChange={handleFileChange}
+                          className="cursor-pointer"
+                        />
+                        {filePreview && (
+                          <div className="mt-2">
+                            <img 
+                              src={filePreview} 
+                              alt="Preview Bukti Transfer" 
+                              className="max-w-full h-auto max-h-32 rounded border"
+                            />
+                          </div>
+                        )}
+                      </div>
+                      <p className="text-xs text-gray-500">
+                        Upload gambar bukti transfer (JPG, PNG, max 2MB)
+                      </p>
+                    </div>
+                  )}
+                  
+                  {/* Payment amount info box in payment modal */}
+                  <div className="mb-4 bg-blue-50 p-3 rounded-md">
+                    <p className="text-blue-800 font-medium">
+                      Jumlah yang harus dibayar: {formatCurrency(
+                        detailItem?.jenis === 'dp' 
+                          ? priceDetails.remainingAmount  // Show remaining amount for DP payments
+                          : priceDetails.totalPrice       // Show total for full payments
+                      )}
+                    </p>
+                  </div>
+                  
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Informasi Pembayaran</AlertTitle>
+                    <AlertDescription>
+                      Pembayaran lunas akan dikirim untuk verifikasi admin. Status akan menjadi "Pending" hingga diverifikasi.
+                    </AlertDescription>
+                  </Alert>
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsPaymentModalOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleSubmitPayment} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Memproses...
+                  </>
+                ) : (
+                  <>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Kirim Pembayaran
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Delete Confirmation Dialog */}
+        <AlertDialog open={isDeleteModalOpen} onOpenChange={setIsDeleteModalOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Hapus Pembayaran</AlertDialogTitle>
+              <AlertDialogDescription>
+                Apakah Anda yakin ingin menghapus data pembayaran ini? 
+                Tindakan ini tidak dapat dibatalkan.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Batal</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleDelete}
+                className="bg-red-600 hover:bg-red-700 text-white"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    Menghapus...
+                  </>
+                ) : (
+                  "Hapus"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </SidebarInset>
     </SidebarProvider>
   )
