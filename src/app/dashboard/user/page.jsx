@@ -59,7 +59,7 @@ import {
 import toast from "react-hot-toast";
 
 export default function Page() {
-  const isLoggedIn = useAuthRedirect(); 
+  const isLoggedIn = useAuthRedirect();
 
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -86,7 +86,7 @@ export default function Page() {
     role: "jemaah",
     image: null,
   });
-const isLoggedIni = useAuthRedirect();
+  const isLoggedIni = useAuthRedirect();
 
   //const isLoading = isLoggedIn === null;
 
@@ -293,7 +293,7 @@ const isLoggedIni = useAuthRedirect();
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
   if (isLoggedIni === null) {
-    return ;
+    return;
   }
 
   if (isLoggedIni === false) {
@@ -319,538 +319,497 @@ const isLoggedIni = useAuthRedirect();
     //     </div>
     //   ) : (
     //     <>
-          <SidebarProvider>
-            <AppSidebar />
-            <SidebarInset>
-              {/* Header */}
-              <header className="flex h-16 items-center gap-2 border-b bg-white px-4 shadow-sm">
-                <div className="flex items-center gap-2">
-                  <SidebarTrigger className="-ml-1" />
-                  <Separator orientation="vertical" className="h-4 mr-2" />
-                  <Breadcrumb>
-                    <BreadcrumbList>
-                      <BreadcrumbItem className="hidden md:block">
-                        <BreadcrumbLink href="/dashboard">
-                          Dashboard
-                        </BreadcrumbLink>
-                      </BreadcrumbItem>
-                      <BreadcrumbSeparator className="hidden md:block" />
-                      <BreadcrumbItem>
-                        <BreadcrumbPage>Pengguna</BreadcrumbPage>
-                      </BreadcrumbItem>
-                    </BreadcrumbList>
-                  </Breadcrumb>
-                </div>
-              </header>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        {/* Header */}
+        <header className="flex h-16 items-center gap-2 border-b bg-white px-4 shadow-sm">
+          <div className="flex items-center gap-2">
+            <SidebarTrigger className="-ml-1" />
+            <Separator orientation="vertical" className="h-4 mr-2" />
+            <Breadcrumb>
+              <BreadcrumbList>
+                <BreadcrumbItem className="hidden md:block">
+                  <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
+                </BreadcrumbItem>
+                <BreadcrumbSeparator className="hidden md:block" />
+                <BreadcrumbItem>
+                  <BreadcrumbPage>Pengguna</BreadcrumbPage>
+                </BreadcrumbItem>
+              </BreadcrumbList>
+            </Breadcrumb>
+          </div>
+        </header>
 
-              {/* Konten Dashboard */}
-              <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
-                <div className="space-y-6">
-                  <Card>
-                    <CardHeader className="pb-3">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <CardTitle>Pengguna</CardTitle>
-                          <CardDescription>
-                            Kelola data pengguna
-                          </CardDescription>
-                        </div>
-                        <Button
-                          onClick={handleAddNew}
-                          size="sm"
-                          className="flex items-center gap-1"
-                        >
-                          <Plus className="h-4 w-4" /> Tambah Pengguna
-                        </Button>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      {/* Pencarian */}
-                      <div className="flex items-center mb-4">
-                        <div className="relative flex-1">
-                          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
-                          <Input
-                            placeholder="Cari data pengguna..."
-                            className="pl-8 w-full"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                          />
-                        </div>
-                      </div>
-
-                      {/* Tabel Pengguna dengan komponen Table */}
-                      <div className="rounded-md border overflow-hidden">
-                        <Table>
-                          <TableHeader>
-                            <TableRow className="bg-gray-50 hover:bg-gray-50">
-                              <TableHead className="w-12 font-medium">
-                                ID
-                              </TableHead>
-                              <TableHead className="font-medium">
-                                Nama
-                              </TableHead>
-                              <TableHead className="font-medium">
-                                Email
-                              </TableHead>
-                              <TableHead className="font-medium">
-                                Telepon
-                              </TableHead>
-                              <TableHead className="font-medium">
-                                Role
-                              </TableHead>
-                              <TableHead className="font-medium">
-                                Alamat
-                              </TableHead>
-                              <TableHead className="text-right font-medium">
-                                Aksi
-                              </TableHead>
-                            </TableRow>
-                          </TableHeader>
-                          <TableBody>
-                            {currentItems.length > 0 ? (
-                              currentItems.map((item, index) => (
-                                <TableRow
-                                  key={item.id}
-                                  className="hover:bg-gray-50"
-                                >
-                                  <TableCell className="font-medium">
-                                    {(currentPage - 1) * itemsPerPage +
-                                      index +
-                                      1}
-                                  </TableCell>
-                                  <TableCell>{item.name}</TableCell>
-                                  <TableCell>{item.email}</TableCell>
-                                  <TableCell>{item.phone}</TableCell>
-                                  <TableCell>
-                                    <span
-                                      className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                        item.role === "admin"
-                                          ? "bg-blue-100 text-blue-700"
-                                          : "bg-green-100 text-green-700"
-                                      }`}
-                                    >
-                                      {item.role}
-                                    </span>
-                                  </TableCell>
-                                  <TableCell
-                                    className="max-w-[200px] truncate"
-                                    title={item.address}
-                                  >
-                                    {item.address}
-                                  </TableCell>
-                                  <TableCell className="text-right">
-                                    <div className="flex justify-end gap-2">
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => handleDetails(item)}
-                                      >
-                                        <Eye className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0"
-                                        onClick={() => handleEdit(item)}
-                                      >
-                                        <Edit className="h-4 w-4" />
-                                      </Button>
-                                      <Button
-                                        variant="outline"
-                                        size="sm"
-                                        className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
-                                        onClick={() => handleDeleteClick(item)}
-                                      >
-                                        <Trash2 className="h-4 w-4" />
-                                      </Button>
-                                    </div>
-                                  </TableCell>
-                                </TableRow>
-                              ))
-                            ) : (
-                              <TableRow>
-                                <TableCell
-                                  colSpan={7}
-                                  className="text-center py-6 text-gray-500"
-                                >
-                                  Tidak ada data pengguna
-                                </TableCell>
-                              </TableRow>
-                            )}
-                          </TableBody>
-                        </Table>
-                      </div>
-                    </CardContent>
-
-                    <CardFooter>
-                      {totalPages > 1 && (
-                        <div className="flex items-center justify-center w-full gap-1 mt-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              paginate(currentPage > 1 ? currentPage - 1 : 1)
-                            }
-                            disabled={currentPage === 1}
-                          >
-                            Previous
-                          </Button>
-                          {Array.from({ length: totalPages }, (_, i) => (
-                            <Button
-                              key={i}
-                              variant={
-                                currentPage === i + 1 ? "default" : "outline"
-                              }
-                              size="sm"
-                              onClick={() => paginate(i + 1)}
-                              className="w-8 h-8"
-                            >
-                              {i + 1}
-                            </Button>
-                          ))}
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() =>
-                              paginate(
-                                currentPage < totalPages
-                                  ? currentPage + 1
-                                  : totalPages
-                              )
-                            }
-                            disabled={currentPage === totalPages}
-                          >
-                            Next
-                          </Button>
-                        </div>
-                      )}
-                    </CardFooter>
-                  </Card>
-
-                  {/* Dialog Detail Pengguna */}
-                  <Dialog
-                    open={isDetailModalOpen}
-                    onOpenChange={setIsDetailModalOpen}
+        {/* Konten Dashboard */}
+        <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
+          <div className="space-y-6">
+            <Card>
+              <CardHeader className="pb-3">
+                <div className="flex justify-between items-center">
+                  <div>
+                    <CardTitle>Pengguna</CardTitle>
+                    <CardDescription>Kelola data pengguna</CardDescription>
+                  </div>
+                  <Button
+                    onClick={handleAddNew}
+                    size="sm"
+                    className="flex items-center gap-1"
                   >
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>Detail Pengguna</DialogTitle>
-                        <DialogDescription>
-                          Informasi lengkap pengguna.
-                        </DialogDescription>
-                      </DialogHeader>
-                      {detailItem && (
-                        <div className="grid gap-3 text-sm py-2">
-                          <Separator />
+                    <Plus className="h-4 w-4" /> Tambah Pengguna
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent>
+                {/* Pencarian */}
+                <div className="flex items-center mb-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input
+                      placeholder="Cari data pengguna..."
+                      className="pl-8 w-full"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                    />
+                  </div>
+                </div>
 
-                          <div className="flex justify-center mb-4">
-                            {detailItem.image ? (
-                              <img
-                                src={detailItem.image || "/image/logo.png"}
-                                alt="Foto Pengguna"
-                                className="w-24 h-24 rounded-full object-cover"
-                              />
-                            ) : (
-                              <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
-                                <span className="text-gray-500">No Image</span>
-                              </div>
-                            )}
-                          </div>
-
-                          <div className="grid grid-cols-3 items-center">
-                            <span className="font-semibold">ID:</span>
-                            <span className="col-span-2">{detailItem.id}</span>
-                          </div>
-                          <div className="grid grid-cols-3 items-center">
-                            <span className="font-semibold">Nama:</span>
-                            <span className="col-span-2">
-                              {detailItem.name}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 items-center">
-                            <span className="font-semibold">Email:</span>
-                            <span className="col-span-2">
-                              {detailItem.email}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 items-center">
-                            <span className="font-semibold">Telepon:</span>
-                            <span className="col-span-2">
-                              {detailItem.phone}
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 items-center">
-                            <span className="font-semibold">Role:</span>
-                            <span className="col-span-2">
+                {/* Tabel Pengguna dengan komponen Table */}
+                <div className="rounded-md border overflow-hidden">
+                  <Table>
+                    <TableHeader>
+                      <TableRow className="bg-gray-50 hover:bg-gray-50">
+                        <TableHead className="w-12 font-medium">No</TableHead>
+                        <TableHead className="font-medium">Nama</TableHead>
+                        <TableHead className="font-medium">Email</TableHead>
+                        <TableHead className="font-medium">Telepon</TableHead>
+                        <TableHead className="font-medium">Role</TableHead>
+                        <TableHead className="font-medium">Alamat</TableHead>
+                        <TableHead className="text-right font-medium">
+                          Aksi
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {currentItems.length > 0 ? (
+                        currentItems.map((item, index) => (
+                          <TableRow key={item.id} className="hover:bg-gray-50">
+                            <TableCell className="font-medium">
+                              {(currentPage - 1) * itemsPerPage + index + 1}
+                            </TableCell>
+                            <TableCell>{item.name}</TableCell>
+                            <TableCell>{item.email}</TableCell>
+                            <TableCell>{item.phone}</TableCell>
+                            <TableCell>
                               <span
                                 className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                                  detailItem.role === "admin"
+                                  item.role === "admin"
                                     ? "bg-blue-100 text-blue-700"
                                     : "bg-green-100 text-green-700"
                                 }`}
                               >
-                                {detailItem.role}
+                                {item.role}
                               </span>
-                            </span>
-                          </div>
-                          <div className="grid grid-cols-3 items-center">
-                            <span className="font-semibold">Alamat:</span>
-                            <span className="col-span-2">
-                              {detailItem.address}
-                            </span>
-                          </div>
+                            </TableCell>
+                            <TableCell
+                              className="max-w-[200px] truncate"
+                              title={item.address}
+                            >
+                              {item.address}
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <div className="flex justify-end gap-2">
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleDetails(item)}
+                                >
+                                  <Eye className="h-4 w-4" />
+                                </Button>
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0"
+                                  onClick={() => handleEdit(item)}
+                                  disabled={item.role !== "admin"}
+                                >
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  className="h-8 w-8 p-0 text-red-500 hover:text-red-700"
+                                  onClick={() => handleDeleteClick(item)}
+                                  disabled={item.role !== "admin"}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      ) : (
+                        <TableRow>
+                          <TableCell
+                            colSpan={7}
+                            className="text-center py-6 text-gray-500"
+                          >
+                            Tidak ada data pengguna
+                          </TableCell>
+                        </TableRow>
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+              </CardContent>
+
+              <CardFooter>
+                {totalPages > 1 && (
+                  <div className="flex items-center justify-center w-full gap-1 mt-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        paginate(currentPage > 1 ? currentPage - 1 : 1)
+                      }
+                      disabled={currentPage === 1}
+                    >
+                      Previous
+                    </Button>
+                    {Array.from({ length: totalPages }, (_, i) => (
+                      <Button
+                        key={i}
+                        variant={currentPage === i + 1 ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => paginate(i + 1)}
+                        className="w-8 h-8"
+                      >
+                        {i + 1}
+                      </Button>
+                    ))}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() =>
+                        paginate(
+                          currentPage < totalPages
+                            ? currentPage + 1
+                            : totalPages
+                        )
+                      }
+                      disabled={currentPage === totalPages}
+                    >
+                      Next
+                    </Button>
+                  </div>
+                )}
+              </CardFooter>
+            </Card>
+
+            {/* Dialog Detail Pengguna */}
+            <Dialog
+              open={isDetailModalOpen}
+              onOpenChange={setIsDetailModalOpen}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Detail Pengguna</DialogTitle>
+                  <DialogDescription>
+                    Informasi lengkap pengguna.
+                  </DialogDescription>
+                </DialogHeader>
+                {detailItem && (
+                  <div className="grid gap-3 text-sm py-2">
+                    <Separator />
+
+                    <div className="flex justify-center mb-4">
+                      {detailItem.image ? (
+                        <img
+                          src={detailItem.image || "/image/logo.png"}
+                          alt="Foto Pengguna"
+                          className="w-24 h-24 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-24 h-24 rounded-full bg-gray-200 flex items-center justify-center">
+                          <span className="text-gray-500">No Image</span>
                         </div>
                       )}
-                      <DialogFooter>
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsDetailModalOpen(false)}
+                    </div>
+
+                    <div className="grid grid-cols-3 items-center">
+                      <span className="font-semibold">Nama:</span>
+                      <span className="col-span-2">{detailItem.name}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center">
+                      <span className="font-semibold">Email:</span>
+                      <span className="col-span-2">{detailItem.email}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center">
+                      <span className="font-semibold">Telepon:</span>
+                      <span className="col-span-2">{detailItem.phone}</span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center">
+                      <span className="font-semibold">Role:</span>
+                      <span className="col-span-2">
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            detailItem.role === "admin"
+                              ? "bg-blue-100 text-blue-700"
+                              : "bg-green-100 text-green-700"
+                          }`}
                         >
-                          Tutup
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* Add/Edit Modal */}
-                  <Dialog
-                    open={isAddModalOpen}
-                    onOpenChange={setIsAddModalOpen}
+                          {detailItem.role}
+                        </span>
+                      </span>
+                    </div>
+                    <div className="grid grid-cols-3 items-center">
+                      <span className="font-semibold">Alamat:</span>
+                      <span className="col-span-2">{detailItem.address}</span>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDetailModalOpen(false)}
                   >
-                    <DialogContent>
-                      <DialogHeader>
-                        <DialogTitle>
-                          {isEditing ? "Edit Pengguna" : "Tambah Pengguna Baru"}
-                        </DialogTitle>
-                        <DialogDescription>
-                          {isEditing
-                            ? "Ubah data pengguna di bawah ini."
-                            : "Isi detail untuk pengguna baru."}
-                        </DialogDescription>
-                      </DialogHeader>
-                      <div className="grid gap-4 py-4">
-                        <div className="grid gap-2">
-                          <Label htmlFor="name">Nama</Label>
-                          <Input
-                            id="name"
-                            name="name"
-                            value={form.name}
-                            onChange={handleChange}
-                            placeholder="Masukkan nama pengguna"
-                            required
-                          />
-                          {error?.name && (
-                            <p className="text-xs text-red-500 mt-1">
-                              {error.name[0]}
-                            </p>
-                          )}
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="email">Email</Label>
-                          <Input
-                            id="email"
-                            name="email"
-                            type="email"
-                            value={form.email}
-                            onChange={handleChange}
-                            placeholder="Masukkan email"
-                            required
-                          />
-                          {error?.email && (
-                            <p className="text-xs text-red-500 mt-1">
-                              {error.email[0]}
-                            </p>
-                          )}
-                        </div>
-                        <div className="grid gap-2">
-                          <Label htmlFor="phone">Telepon</Label>
-                          <Input
-                            id="phone"
-                            name="phone"
-                            value={form.phone}
-                            onChange={handleChange}
-                            placeholder="Masukkan nomor telepon"
-                            required
-                          />
-                          {error?.phone && (
-                            <p className="text-xs text-red-500 mt-1">
-                              {error.phone[0]}
-                            </p>
-                          )}
-                        </div>
+                    Tutup
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
-                        <div className="grid gap-2">
-                          <Label htmlFor="image">Foto Profil</Label>
-                          
+            {/* Add/Edit Modal */}
+            <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>
+                    {isEditing ? "Edit Pengguna" : "Tambah Pengguna Baru"}
+                  </DialogTitle>
+                  <DialogDescription>
+                    {isEditing
+                      ? "Ubah data pengguna di bawah ini."
+                      : "Isi detail untuk pengguna baru."}
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid gap-2">
+                    <Label htmlFor="name">Nama<span className="text-red-500">*</span></Label> 
+                    <Input
+                      id="name"
+                      name="name"
+                      value={form.name}
+                      onChange={handleChange}
+                      placeholder="Masukkan nama pengguna"
+                      required
+                    />
+                    {error?.name && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.name[0]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={form.email}
+                      onChange={handleChange}
+                      placeholder="Masukkan email"
+                      required
+                    />
+                    {error?.email && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.email[0]}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-2">
+                    <Label htmlFor="phone">Telepon</Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      value={form.phone}
+                      onChange={handleChange}
+                      placeholder="Masukkan nomor telepon"
+                      required
+                    />
+                    {error?.phone && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.phone[0]}
+                      </p>
+                    )}
+                  </div>
 
+                  <div className="grid gap-2">
+                    <Label htmlFor="image">Foto Profil</Label>
+
+                    <Input
+                      id="image"
+                      name="image"
+                      type="file"
+                      onChange={handleFileChange}
+                      placeholder="Masukkan foto profil"
+                      accept="image/*"
+                      required={!isEditing}
+                    />
+                    {error?.image && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.image[0]}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
+                    <select
+                      id="role"
+                      name="role"
+                      value={form.role}
+                      onChange={handleChange}
+                      required
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Pilih role</option>
+                      <option value="admin">Admin</option>
+                      <option value="jemaah">User</option>
+                    </select>
+
+                    {error?.role && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.role[0]}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="grid gap-2">
+                    <Label htmlFor="address">Alamat</Label>
+                    <Input
+                      id="address"
+                      name="address"
+                      value={form.address}
+                      onChange={handleChange}
+                      placeholder="Masukkan alamat"
+                      required
+                    />
+                    {error?.address && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.address[0]}
+                      </p>
+                    )}
+                  </div>
+                  {!isEditing && (
+                    <>
+                      <div className="grid gap-2">
+                        <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                        <div className="relative">
                           <Input
-                            id="image"
-                            name="image"
-                            type="file"
-                            onChange={handleFileChange}
-                            placeholder="Masukkan foto profil"
-                            accept="image/*"
-                            required={!isEditing}
+                            id="password"
+                            name="password"
+                            type={showPassword ? "text" : "password"}
+                            value={form.password}
+                            onChange={handleChange}
+                            placeholder="Masukkan password"
+                            required
                           />
-                          {error?.image && (
+                          {error?.password && (
                             <p className="text-xs text-red-500 mt-1">
-                              {error.image[0]}
+                              {error.password[0]}
                             </p>
                           )}
-                        </div>
-
-                        <div className="grid gap-2">
-                          <Label htmlFor="role">Role</Label>
-                          <select
-                            id="role"
-                            name="role"
-                            value={form.role}
-                            onChange={handleChange}
-                            required
-                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                          <span
+                            className="absolute right-3 top-3 cursor-pointer"
+                            onClick={() => setShowPassword(!showPassword)}
                           >
-                            <option value="">Pilih role</option>
-                            <option value="admin">Admin</option>
-                            <option value="jemaah">User</option>
-                          </select>
-
-                          {error?.role && (
-                            <p className="text-xs text-red-500 mt-1">
-                              {error.role[0]}
-                            </p>
-                          )}
+                            {showPassword ? <EyeOff /> : <Eye />}
+                          </span>
                         </div>
+                      </div>
 
-                        <div className="grid gap-2">
-                          <Label htmlFor="address">Alamat</Label>
+                      <div className="grid gap-2">
+                        <Label htmlFor="confirmPassword">
+                          Konfirmasi Password <span className="text-red-500">*</span>
+                        </Label>
+                        <div className="relative">
                           <Input
-                            id="address"
-                            name="address"
-                            value={form.address}
+                            id="confirmPassword"
+                            name="confirmPassword"
+                            type={showConfirmPassword ? "text" : "password"}
+                            value={form.confirmPassword}
                             onChange={handleChange}
-                            placeholder="Masukkan alamat"
+                            placeholder="Konfirmasi password"
                             required
                           />
-                          {error?.address && (
+                          {error?.password_confirmation && (
                             <p className="text-xs text-red-500 mt-1">
-                              {error.address[0]}
+                              {error.password_confirmation[0]}
                             </p>
                           )}
+                          <span
+                            className="absolute right-3 top-3 cursor-pointer"
+                            onClick={() =>
+                              setShowConfirmPassword(!showConfirmPassword)
+                            }
+                          >
+                            {showConfirmPassword ? <EyeOff /> : <Eye />}
+                          </span>
                         </div>
-                        {!isEditing && (
-                          <>
-                            <div className="grid gap-2">
-                              <Label htmlFor="password">Password</Label>
-                              <div className="relative">
-                                <Input
-                                  id="password"
-                                  name="password"
-                                  type={showPassword ? "text" : "password"}
-                                  value={form.password}
-                                  onChange={handleChange}
-                                  placeholder="Masukkan password"
-                                  required
-                                />
-                                {error?.password && (
-                                  <p className="text-xs text-red-500 mt-1">
-                                    {error.password[0]}
-                                  </p>
-                                )}
-                                <span
-                                  className="absolute right-3 top-3 cursor-pointer"
-                                  onClick={() => setShowPassword(!showPassword)}
-                                >
-                                  {showPassword ? <EyeOff /> : <Eye />}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="grid gap-2">
-                              <Label htmlFor="confirmPassword">
-                                Konfirmasi Password
-                              </Label>
-                              <div className="relative">
-                                <Input
-                                  id="confirmPassword"
-                                  name="confirmPassword"
-                                  type={
-                                    showConfirmPassword ? "text" : "password"
-                                  }
-                                  value={form.confirmPassword}
-                                  onChange={handleChange}
-                                  placeholder="Konfirmasi password"
-                                  required
-                                />
-                                {error?.password_confirmation && (
-                                  <p className="text-xs text-red-500 mt-1">
-                                    {error.password_confirmation[0]}
-                                  </p>
-                                )}
-                                <span
-                                  className="absolute right-3 top-3 cursor-pointer"
-                                  onClick={() =>
-                                    setShowConfirmPassword(!showConfirmPassword)
-                                  }
-                                >
-                                  {showConfirmPassword ? <EyeOff /> : <Eye />}
-                                </span>
-                              </div>
-                            </div>
-                          </>
-                        )}
                       </div>
-                      <DialogFooter>
-                        {error?.general && (
-                          <div className="text-sm text-red-500 text-center">
-                            {error.general[0]}
-                          </div>
-                        )}
-                        <Button
-                          variant="outline"
-                          onClick={() => setIsAddModalOpen(false)}
-                        >
-                          Batal
-                        </Button>
-                        <Button onClick={handleFormSubmit}>
-                          {isEditing ? "Simpan Perubahan" : "Tambah Pengguna"}
-                        </Button>
-                      </DialogFooter>
-                    </DialogContent>
-                  </Dialog>
-
-                  {/* Delete Confirmation Modal */}
-                  <AlertDialog
-                    open={isDeleteModalOpen}
-                    onOpenChange={setIsDeleteModalOpen}
-                  >
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>
-                          Yakin ingin menghapus?
-                        </AlertDialogTitle>
-                        <AlertDialogDescription>
-                          Tindakan ini tidak dapat dibatalkan. Penghapusan akan
-                          menghilangkan data pengguna
-                          {selectedItem && ` "${selectedItem.name}"`} secara
-                          permanen.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Batal</AlertDialogCancel>
-                        <AlertDialogAction
-                          onClick={handleDelete}
-                          className="bg-red-500 hover:bg-red-600"
-                        >
-                          Hapus
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
+                    </>
+                  )}
                 </div>
-              </main>
-            </SidebarInset>
-          </SidebarProvider>
+                <DialogFooter>
+                  {error?.general && (
+                    <div className="text-sm text-red-500 text-center">
+                      {error.general[0]}
+                    </div>
+                  )}
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsAddModalOpen(false)}
+                  >
+                    Batal
+                  </Button>
+                  <Button onClick={handleFormSubmit}>
+                    {isEditing ? "Simpan Perubahan" : "Tambah Pengguna"}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            {/* Delete Confirmation Modal */}
+            <AlertDialog
+              open={isDeleteModalOpen}
+              onOpenChange={setIsDeleteModalOpen}
+            >
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Yakin ingin menghapus?</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Tindakan ini tidak dapat dibatalkan. Penghapusan akan
+                    menghilangkan data pengguna
+                    {selectedItem && ` "${selectedItem.name}"`} secara permanen.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={handleDelete}
+                    className="bg-red-500 hover:bg-red-600"
+                  >
+                    Hapus
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          </div>
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
     //     </>
     //   )}
     // </div>

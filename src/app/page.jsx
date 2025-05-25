@@ -1,10 +1,20 @@
 "use client";
 
 import * as React from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronsUpDown, Settings } from "lucide-react";
+import toast from "react-hot-toast";
+import {
+  NavigationMenu,
+  NavigationMenuList,
+  NavigationMenuItem,
+  NavigationMenuTrigger,
+  NavigationMenuContent,
+  NavigationMenuLink,
+} from "@/components/ui/navigation-menu";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -14,14 +24,6 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  NavigationMenu,
-  NavigationMenuList,
-  NavigationMenuItem,
-  NavigationMenuTrigger,
-  NavigationMenuContent,
-  NavigationMenuLink,
-} from "@/components/ui/navigation-menu";
 import {
   Calendar,
   Clock,
@@ -35,16 +37,11 @@ import {
   User,
   Menu,
   X,
-  LogOut,
 } from "lucide-react";
-import useAuthRedirect from "@/lib/auth";
-import toast from "react-hot-toast";
 
 export default function Page() {
   const [data, setData] = useState([]);
   const [data1, setData1] = useState([]);
-  const router = useRouter();
-  const isLoggedIni = useAuthRedirect();
   const [scrollY, setScrollY] = useState(0);
   const [activeSection, setActiveSection] = useState("home");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -58,49 +55,33 @@ export default function Page() {
   ];
 
   useEffect(() => {
-  const fetchAllData = async () => {
-    try {
-      const token = localStorage.getItem("token");
+    const fetchAllData = async () => {
+      try {
+        const [jadwalRes, beritaRes] = await Promise.all([
+          fetch("http://127.0.0.1:8000/api/jadwals"),
+          fetch("http://127.0.0.1:8000/api/beritas"),
+        ]);
 
-      if (!token) {
-        toast.error("Token tidak ditemukan, Anda perlu login kembali.");
-        return;
+        if (!jadwalRes.ok) throw new Error("Gagal mengambil data jadwal");
+        if (!beritaRes.ok) throw new Error("Gagal mengambil data berita");
+
+        const jadwalData = await jadwalRes.json();
+        const beritaData = await beritaRes.json();
+
+        setData(jadwalData.data || jadwalData);
+        setData1(beritaData.data || beritaData);
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
       }
+    };
 
-      const headers = {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      };
-
-      const [jadwalRes, beritaRes] = await Promise.all([
-        fetch("http://127.0.0.1:8000/api/jadwal1", { headers }),
-        fetch("http://127.0.0.1:8000/api/berita1", { headers }),
-      ]);
-
-      if (!jadwalRes.ok) throw new Error("Gagal mengambil data jadwal");
-      if (!beritaRes.ok) throw new Error("Gagal mengambil data berita");
-
-      const jadwalData = await jadwalRes.json();
-      const beritaData = await beritaRes.json();
-
-      setData(jadwalData.data || jadwalData);
-      setData1(beritaData.data || beritaData);
-    } catch (error) {
-      console.error("Gagal memuat data:", error);
-    }
-  };
-
-  fetchAllData();
-}, []);
-
+    fetchAllData();
+  }, []);
 
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
-      const token = localStorage.getItem("token");
-      if (!token) return;
-
-      const currentPosition = window.scrollY + 100;
+      const currentPosition = window.scrollY + 100; // Offset for header
 
       const sectionElements = sections.map((section) => ({
         id: section.id,
@@ -119,61 +100,6 @@ export default function Page() {
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const [userName, setUserName] = useState(null);
-  const [userImage, setUserImage] = useState(null);
-
-  useEffect(() => {
-    if (typeof window !== "undefined") {
-      const storedUser = localStorage.getItem("user");
-      if (storedUser) {
-        try {
-          const user = JSON.parse(storedUser);
-          setUserName(user.name);
-
-          if (user.image) {
-            setUserImage(user.image);
-          }
-        } catch (error) {
-          console.error("Failed to parse user from localStorage:", error);
-        }
-      }
-    }
-  }, []);
-
-  const handleLogout = async () => {
-    try {
-      const token = localStorage.getItem("token");
-
-      if (!token) {
-        alert("Token tidak ditemukan, Anda perlu login kembali.");
-        return;
-      }
-
-      const response = await fetch("http://localhost:8000/api/logout", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-          Accept: "application/json",
-        },
-      });
-
-      console.log("Response Status:", response.status);
-
-      if (response.ok) {
-        localStorage.removeItem("token");
-        router.push("/login");
-      } else {
-        const errorData = await response.json();
-        console.error("Logout gagal:", errorData.message);
-        alert("Logout gagal: " + (errorData.message || "Unknown error"));
-      }
-    } catch (error) {
-      console.error("Error saat logout:", error);
-      alert("Terjadi kesalahan saat logout");
-    }
-  };
-
   const scrollToSection = (id) => {
     const element = document.getElementById(id);
     if (element) {
@@ -183,39 +109,13 @@ export default function Page() {
     }
   };
 
-  if (isLoggedIni === null) {
-    return;
-  }
-
-  if (isLoggedIni === false) {
-    return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-          <h2 className="text-lg font-semibold mb-4">
-            Login terlebih dahulu...
-          </h2>
-        </div>
-      </div>
-    );
-  }
-
   return (
-    // <div className="p-4">
-    //   {isLoading ? (
-    //     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    //       <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-    //         <h2 className="text-lg font-semibold mb-4">
-    //           Login terlebih dahulu...
-    //         </h2>
-    //       </div>
-    //     </div>
-    //   ) : (
-    //     <>
     <div className="relative min-h-screen bg-gradient-to-b from-green-50 to-white">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
         <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-white to-transparent" />
       </div>
 
+      {/* Header & Navigation - Responsive */}
       <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-green-100 shadow-sm">
         <div className="container mx-auto px-4 py-4 flex justify-between items-center">
           <div className="flex items-center gap-2">
@@ -225,46 +125,44 @@ export default function Page() {
             <h1 className="text-2xl font-bold text-green-800">SIMASJID</h1>
           </div>
 
-          <div className="hidden md:flex items-center gap-4">
-            <DropdownMenu>
-              <DropdownMenuTrigger className="flex items-center gap-2 cursor-pointer">
-                {userImage ? (
-                  <img
-                    src={userImage}
-                    alt="User Profile"
-                    className="w-8 h-8 rounded-full object-cover"
-                    onError={(e) => {
-                      e.target.src = "/image/logo.png";
-                    }}
-                  />
-                ) : (
-                  <img
-                    src="/image/logo.png"
-                    alt="Default Logo"
-                    className="w-8 h-8 rounded-full object-cover"
-                  />
-                )}
-                <span className="text-gray-700">{userName}</span>
-                <ChevronsUpDown className="ml-auto size-4" />
-              </DropdownMenuTrigger>
+          {/* Desktop Navigation */}
+          <div className="hidden md:block">
+            <NavigationMenu>
+              <NavigationMenuList className="flex items-center space-x-1">
+                {sections.map((section) => (
+                  <NavigationMenuItem key={section.id}>
+                    <button
+                      onClick={() => scrollToSection(section.id)}
+                      className={`px-4 py-2 rounded-md text-sm font-medium transition-colors flex items-center gap-2 ${
+                        activeSection === section.id
+                          ? "bg-green-100 text-green-600" // No white point (border removed)
+                          : "text-gray-700 hover:bg-green-50 hover:text-green-600"
+                      }`}
+                    >
+                      {section.icon}
+                      {section.label}
+                    </button>
+                  </NavigationMenuItem>
+                ))}
+              </NavigationMenuList>
+            </NavigationMenu>
+          </div>
 
-              <DropdownMenuContent className="w-56">
-                <DropdownMenuLabel>Akun</DropdownMenuLabel>
-                <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => router.push("/landing-page/profile")}
-                >
-                  <User className="mr-2" />
-                  Profile
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="cursor-pointer"
-                >
-                  <LogOut size={16} className="mr-2" /> Logout
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
+          <div className="flex items-center gap-4">
+            <Link href="/login">
+              <button className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-md flex items-center gap-2 transition-colors">
+                <User size={16} />
+                <span className="hidden sm:inline">Login</span>
+              </button>
+            </Link>
+
+            {/* Menu Mobile Toggle */}
+            <button
+              className="md:hidden text-green-600 p-2"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
           </div>
         </div>
 
@@ -625,10 +523,22 @@ export default function Page() {
             <h3 className="text-2xl font-bold text-green-800 mb-4">
               Cara Reservasi Fasilitas
             </h3>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-8 mt-8">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 mt-8">
               <div className="flex flex-col items-center">
                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
                   <span className="text-2xl font-bold">1</span>
+                </div>
+                <h4 className="font-semibold text-green-700 mb-2">
+                  Register/Login
+                </h4>
+                <p className="text-gray-600 text-sm">
+                  Register atau login terlebih dahulu
+                </p>
+              </div>
+
+              <div className="flex flex-col items-center">
+                <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
+                  <span className="text-2xl font-bold">2</span>
                 </div>
                 <h4 className="font-semibold text-green-700 mb-2">
                   Pilih Fasilitas
@@ -640,7 +550,7 @@ export default function Page() {
 
               <div className="flex flex-col items-center">
                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">2</span>
+                  <span className="text-2xl font-bold">3</span>
                 </div>
                 <h4 className="font-semibold text-green-700 mb-2">
                   Isi Formulir
@@ -652,7 +562,7 @@ export default function Page() {
 
               <div className="flex flex-col items-center">
                 <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">3</span>
+                  <span className="text-2xl font-bold">4</span>
                 </div>
                 <h4 className="font-semibold text-green-700 mb-2">
                   Konfirmasi
@@ -1123,8 +1033,5 @@ export default function Page() {
         </div>
       </footer>
     </div>
-    //     </>
-    //   )}
-    // </div>
   );
 }

@@ -104,7 +104,7 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3">
-                <Label htmlFor="name">Nama</Label>
+                <Label htmlFor="name">Nama <span className="text-red-500">*</span></Label>
                 <Input
                   id="name"
                   type="text"
@@ -118,7 +118,7 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3">
-                <Label htmlFor="email">Email</Label>
+                <Label htmlFor="email">Email<span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
                   type="email"
@@ -138,7 +138,6 @@ export function RegisterForm({ className, ...props }) {
                   type="text"
                   value={form.phone}
                   onChange={handleChange}
-                  required
                 />
                 {error?.phone && (
                   <p className="text-xs text-red-500 mt-1">{error.phone[0]}</p>
@@ -152,7 +151,6 @@ export function RegisterForm({ className, ...props }) {
                   type="text"
                   value={form.address}
                   onChange={handleChange}
-                  required
                 />
                 {error?.address && (
                   <p className="text-xs text-red-500 mt-1">
@@ -175,7 +173,7 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3 relative">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">Password<span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <Input
                     id="password"
@@ -200,7 +198,7 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3 relative">
-                <Label htmlFor="confirmPassword">Konfirmasi Password</Label>
+                <Label htmlFor="confirmPassword">Konfirmasi Password<span className="text-red-500">*</span></Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"

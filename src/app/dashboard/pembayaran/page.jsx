@@ -36,11 +36,15 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { toast } from "@/components/ui/use-toast"
 import { Badge } from "@/components/ui/badge"
+import useAuthRedirect from "@/lib/auth"
 
 // API base URLs
-const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
+const API_BASE_URL = "http://127.0.0.1:8000/api/"
+
 
 export default function Page() {
+  const isLoggedIn = useAuthRedirect();
+
   const [payments, setPayments] = useState([])
   const [filteredPayments, setFilteredPayments] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -77,19 +81,6 @@ export default function Page() {
     }
   }
 
-  // Get token from localStorage
-  const getToken = () => {
-    const token = localStorage.getItem("token")
-    if (!token) {
-      toast({
-        title: "Tidak ada token",
-        description: "Silakan login terlebih dahulu",
-        variant: "destructive",
-      })
-    }
-    return token
-  }
-
   // Format currency
   const formatCurrency = (amount) => {
     if (amount === null || amount === undefined) return "-"
@@ -122,115 +113,72 @@ export default function Page() {
     )
   }
 
-  // Fetch all payment data with reservations
-  const fetchPayments = async () => {
-    setIsLoading(true)
-    try {
-      const token = getToken()
-      if (!token) return
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+        if (!token) return;
 
-      const response = await fetch(API_BASE_URL, {
-        method: "GET",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      })
+        const response = await fetch("http://127.0.0.1:8000/api/pembayaran", {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
 
-      if (!response.ok) {
-        if (response.status === 401) {
-          toast({
-            title: "Sesi berakhir",
-            description: "Sesi login Anda telah berakhir. Silakan login kembali.",
-            variant: "destructive",
-          })
-          return
-        }
-        throw new Error(`HTTP error ${response.status}`)
+        if (!response.ok) throw new Error("Gagal mengambil data");
+
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
       }
+    };
 
-      const result = await response.json()
-      
-      // Process payment data
-      let paymentData = []
-      
-      if (result && Array.isArray(result.data)) {
-        paymentData = result.data
-      } else if (Array.isArray(result)) {
-        paymentData = result
-      } else if (result.data && typeof result.data === 'object') {
-        // Handle nested data object
-        const dataValues = Object.values(result.data)
-        if (Array.isArray(dataValues) && dataValues.length > 0) {
-          if (Array.isArray(dataValues[0])) {
-            paymentData = dataValues[0]
-          } else {
-            paymentData = dataValues
-          }
-        }
-      }
-      
-      setPayments(paymentData)
-      setFilteredPayments(paymentData)
-      
-    } catch (error) {
-      console.error("Failed to fetch payments:", error)
-      toast({
-        title: "Error",
-        description: `Gagal memuat data pembayaran: ${error.message}`,
-        variant: "destructive",
-      })
-      setPayments([])
-      setFilteredPayments([])
-    } finally {
-      setIsLoading(false)
+    if (isLoggedIn) {
+      fetchData();
     }
+  }, [isLoggedIn]);
+
+  const fetchPayments = async () => {
+  try {
+    setIsLoading(true);
+    const token = localStorage.getItem("token");
+    if (!token) return;
+
+    const response = await fetch(`${API_BASE_URL}pembayaran`, {
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) throw new Error("Gagal mengambil data");
+
+    const data = await response.json();
+    setPayments(data);
+    setFilteredPayments(data);
+  } catch (error) {
+    console.error("Gagal memuat data:", error);
+    toast({
+      title: "Error",
+      description: "Gagal memuat data pembayaran.",
+      variant: "destructive",
+    });
+  } finally {
+    setIsLoading(false);
   }
+};
 
-  // Handle detail view
-  const handleDetails = (item) => {
-    setDetailItem(item)
-    setIsDetailModalOpen(true)
+
+useEffect(() => {
+  if (isLoggedIn) {
+    fetchPayments();
   }
+}, [isLoggedIn]);
 
-  // Handle search
-  useEffect(() => {
-    if (!payments.length) return
-    
-    const filtered = payments.filter(item => {
-      // Get all searchable fields (include nested reservasi data)
-      const reservasiId = item.reservasi_id ? item.reservasi_id.toString().toLowerCase() : ""
-      const userId = item.user_id ? item.user_id.toString().toLowerCase() : ""
-      const status = item.status ? item.status.toLowerCase() : ""
-      
-      // Search in reservasi data if available
-      let reservasiData = ""
-      if (item.reservasi) {
-        const reservasi = item.reservasi
-        // Add any relevant reservasi fields for searching
-        reservasiData = `${reservasi.id || ""} ${reservasi.tgl_reservasi || ""} ${reservasi.status || ""}`
-        reservasiData = reservasiData.toLowerCase()
-      }
-      
-      const searchLower = searchTerm.toLowerCase()
-      
-      return (
-        reservasiId.includes(searchLower) ||
-        userId.includes(searchLower) ||
-        status.includes(searchLower) ||
-        reservasiData.includes(searchLower)
-      )
-    })
-    
-    setFilteredPayments(filtered)
-    setCurrentPage(1)
-  }, [searchTerm, payments])
-
-  // Load data when component mounts
-  useEffect(() => {
-    fetchPayments()
-  }, [])
+const handleDetails = (item) => {
+  setDetailItem(item);
+  setIsDetailModalOpen(true);
+};
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
