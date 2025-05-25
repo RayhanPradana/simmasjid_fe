@@ -75,14 +75,15 @@ export default function Page() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  
+
   const [formData, setFormData] = useState({
     nama_kegiatan: "",
-    hari: "",
+    tanggal: "",
     waktu: "",
     tempat: "",
     penanggung_jawab: "",
     keterangan: "",
+    status: "",
   });
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
@@ -93,33 +94,35 @@ export default function Page() {
     const filtered = data.filter(
       (item) =>
         item.nama_kegiatan.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.hari.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.tanggal.toLowerCase().includes(searchTerm.toLowerCase()) ||
         item.penanggung_jawab
           .toLowerCase()
           .includes(searchTerm.toLowerCase()) ||
-        item.tempat.toLowerCase().includes(searchTerm.toLowerCase())
+        item.tempat.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        item.status.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredData(filtered);
     setCurrentPage(1);
   }, [searchTerm, data]);
 
- const handleInputChange = (e) => {
-  const { id, value } = e.target;
-  setFormData({
-    ...formData,
-    [id]: value,
-  });
-};
+  const handleInputChange = (e) => {
+    const { id, value } = e.target;
+    setFormData({
+      ...formData,
+      [id]: value,
+    });
+  };
 
   // Open add modal
   const handleAddNew = () => {
     setFormData({
       nama_kegiatan: "",
-      hari: "",
+      tanggal: "",
       waktu: "",
       tempat: "",
       penanggung_jawab: "",
       keterangan: "",
+      status: "",
     });
     setIsEditing(false);
     setIsAddModalOpen(true);
@@ -130,11 +133,12 @@ export default function Page() {
     setFormData({
       id: item.id,
       nama_kegiatan: item.nama_kegiatan || "",
-      hari: item.hari || "",
+      tanggal: item.tanggal || "",
       waktu: item.waktu || "",
       tempat: item.tempat || "",
       penanggung_jawab: item.penanggung_jawab || "",
       keterangan: item.keterangan || "",
+      status: item.status || "",
     });
     setIsEditing(true);
     setIsAddModalOpen(true);
@@ -150,7 +154,8 @@ export default function Page() {
   const handleDetails = (item) => {
     // Implementasi view detail bisa ditambahkan di sini
     setDetailItem(item);
-    setIsDetailModalOpen(true);  };
+    setIsDetailModalOpen(true);
+  };
 
   // Handle form submit
   const handleFormSubmit = async (e) => {
@@ -160,11 +165,12 @@ export default function Page() {
     const token = localStorage.getItem("token");
     const form = new FormData();
     form.append("nama_kegiatan", formData.nama_kegiatan);
-    form.append("hari", formData.hari);
+    form.append("tanggal", formData.tanggal);
     form.append("waktu", formData.waktu);
     form.append("tempat", formData.tempat);
     form.append("penanggung_jawab", formData.penanggung_jawab);
     form.append("keterangan", formData.keterangan);
+    form.append("status", formData.status);
 
     if (isEditing) {
       form.append("_method", "PUT");
@@ -195,11 +201,12 @@ export default function Page() {
         setIsAddModalOpen(false);
         setFormData({
           nama_kegiatan: "",
-          hari: "",
+          tanggal: "",
           waktu: "",
           tempat: "",
           penanggung_jawab: "",
           keterangan: "",
+          status: "",
         });
         // refresh data
         const updated = await fetch("http://localhost:8000/api/jadwal", {
@@ -243,7 +250,9 @@ export default function Page() {
         setData(data.filter((d) => d.id !== selectedItem.id));
         toast.success("Data berhasil dihapus!");
       } else {
-        toast.error("Gagal menghapus data: " + (dataRes.message || "Unknown error"));
+        toast.error(
+          "Gagal menghapus data: " + (dataRes.message || "Unknown error")
+        );
       }
     } catch (error) {
       console.error("Error:", error);
@@ -287,22 +296,21 @@ export default function Page() {
     }
   }, [isLoggedIni]);
 
-  
-      if (isLoggedIni === null) {
-      return ;
-    }
-  
-    if (isLoggedIni === false) {
-      return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-          <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-            <h2 className="text-lg font-semibold mb-4">
-              Login terlebih dahulu...
-            </h2>
-          </div>
+  if (isLoggedIni === null) {
+    return;
+  }
+
+  if (isLoggedIni === false) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <h2 className="text-lg font-semibold mb-4">
+            Login terlebih dahulu...
+          </h2>
         </div>
-      );
-    }
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
@@ -368,12 +376,6 @@ export default function Page() {
                       <tr className="bg-gray-50">
                         <th
                           scope="col"
-                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-12"
-                        >
-                          ID
-                        </th>
-                        <th
-                          scope="col"
                           className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-56"
                         >
                           Nama Kegiatan
@@ -382,7 +384,7 @@ export default function Page() {
                           scope="col"
                           className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
                         >
-                          Hari
+                          Tanggal
                         </th>
                         <th
                           scope="col"
@@ -410,6 +412,12 @@ export default function Page() {
                         </th>
                         <th
                           scope="col"
+                          className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                        >
+                          Status
+                        </th>
+                        <th
+                          scope="col"
                           className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-28"
                         >
                           Aksi
@@ -421,14 +429,11 @@ export default function Page() {
                       {currentItems.length > 0 ? (
                         currentItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {item.id}
-                            </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
                               {item.nama_kegiatan}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
-                              {item.hari}
+                              {item.tanggal}
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
                               {item.waktu}
@@ -441,6 +446,19 @@ export default function Page() {
                             </td>
                             <td className="px-4 py-3 text-sm text-gray-900">
                               {item.keterangan}
+                            </td>
+                            <td className="px-4 py-3 text-sm text-gray-900">
+                              <span
+                                className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                  item.status === "Publikasi"
+                                    ? "bg-green-100 text-green-700"
+                                    : "bg-amber-100 text-amber-700"
+                                }`}
+                              >
+                                {item.status === "Publikasi"
+                                  ? "Publikasi"
+                                  : "Draft"}
+                              </span>
                             </td>
                             <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                               <div className="flex justify-end gap-2">
@@ -530,61 +548,80 @@ export default function Page() {
             </Card>
 
             {/* Dialog Detail Berita */}
-                        <Dialog
-                          open={isDetailModalOpen}
-                          onOpenChange={setIsDetailModalOpen}
+            <Dialog
+              open={isDetailModalOpen}
+              onOpenChange={setIsDetailModalOpen}
+            >
+              <DialogContent className="max-w-lg">
+                <DialogHeader>
+                  <DialogTitle>Detail Jadwal</DialogTitle>
+                  <DialogDescription>
+                    Informasi lengkap Jadwal Kegiatan.
+                  </DialogDescription>
+                </DialogHeader>
+                {detailItem && (
+                  <div className="grid gap-4 py-2">
+                    <Separator />
+                    <div className="space-y-1">
+                      <h4 className="text-sm font-medium">Nama Kegiatan:</h4>
+                      <p className="font-sm">{detailItem.nama_kegiatan}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Tangal:</h4>
+                      <p className="text-sm">{detailItem.tanggal}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Waktu:</h4>
+                      <p className="text-sm">{detailItem.waktu}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Tempat:</h4>
+                      <p className="text-sm">{detailItem.tempat}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Penanggung Jawab:</h4>
+                      <p className="text-sm">{detailItem.penanggung_jawab}</p>
+                    </div>
+
+                    <div className="space-y-2">
+                      <h4 className="text-sm font-medium">Keterangan:</h4>
+                      <p className="text-sm">{detailItem.keterangan}</p>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <span className="text-sm font-medium">Status: </span>
+                        <span
+                          className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                            detailItem.status === "Publikasi"
+                              ? "bg-green-100 text-green-700"
+                              : "bg-amber-100 text-amber-700"
+                          }`}
                         >
-                          <DialogContent className="max-w-lg">
-                            <DialogHeader>
-                              <DialogTitle>Detail Jadwal</DialogTitle>
-                              <DialogDescription>
-                                Informasi lengkap Jadwal Kegiatan.
-                              </DialogDescription>
-                            </DialogHeader>
-                            {detailItem && (
-                              <div className="grid gap-4 py-2">
-                                <Separator />
-                                <div className="space-y-1">
-                                  <h4 className="text-sm font-medium">Nama Kegiatan:</h4>
-                                  <p className="font-sm">{detailItem.nama_kegiatan}</p>
-                                </div>
-            
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Hari:</h4>
-                                  <p className="text-sm">{detailItem.hari}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Waktu:</h4>
-                                  <p className="text-sm">{detailItem.waktu}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Tempat:</h4>
-                                  <p className="text-sm">{detailItem.tempat}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Penanggung Jawab:</h4>
-                                  <p className="text-sm">{detailItem.penanggung_jawab}</p>
-                                </div>
-
-                                <div className="space-y-2">
-                                  <h4 className="text-sm font-medium">Keterangan:</h4>
-                                  <p className="text-sm">{detailItem.keterangan}</p>
-                                </div>
-                              </div>
-                            )}
-                            <DialogFooter>
-                              <Button
-                                variant="outline"
-                                onClick={() => setIsDetailModalOpen(false)}
-                              >
-                                Tutup
-                              </Button>
-                            </DialogFooter>
-                          </DialogContent>
-                        </Dialog>
+                          {detailItem.status === "Publikasi"
+                            ? "Publikasi"
+                            : "Draft"}
+                        </span>
+                      </div>
+                      <span className="text-sm text-gray-500">
+                        ID: {detailItem.id}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                <DialogFooter>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsDetailModalOpen(false)}
+                  >
+                    Tutup
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
 
             {/* Add/Edit Modal */}
             <Dialog open={isAddModalOpen} onOpenChange={setIsAddModalOpen}>
@@ -599,7 +636,7 @@ export default function Page() {
                       : "Isi detail untuk kegiatan baru Anda."}
                   </DialogDescription>
                 </DialogHeader>
-                
+
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
                     <Label htmlFor="nama_kegiatan">Nama Kegiatan</Label>
@@ -618,27 +655,19 @@ export default function Page() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="hari">Hari</Label>
-                    <select
-                      id="hari"
-                      name="hari"
-                      value={formData.hari}
+                    <Label htmlFor="tanggal">Tanggal</Label>
+                    <input
+                      id="tanggal"
+                      name="tanggal"
+                      type="date"
+                      value={formData.tanggal}
                       onChange={handleInputChange}
                       className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                       required
-                    >
-                      <option value="">Pilih hari</option>
-                      <option value="Senin">Senin</option>
-                      <option value="Selasa">Selasa</option>
-                      <option value="Rabu">Rabu</option>
-                      <option value="Kamis">Kamis</option>
-                      <option value="Jumat">Jumat</option>
-                      <option value="Sabtu">Sabtu</option>
-                      <option value="Minggu">Minggu</option>
-                    </select>
-                    {error?.hari && (
+                    />
+                    {error?.tanggal && (
                       <p className="text-xs text-red-500 mt-1">
-                        {error.hari[0]}
+                        {error.tanggal[0]}
                       </p>
                     )}
                   </div>
@@ -707,6 +736,25 @@ export default function Page() {
                       </p>
                     )}
                   </div>
+                  <div className="grid gap-2">
+                      <Label htmlFor="status">Status</Label>
+                      <select
+                        id="status"
+                        name="status"
+                        value={formData.status}
+                        onChange={handleInputChange}
+                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                      >
+                        <option value="">Pilih Status</option>
+                        <option value="Draft">Draft</option>
+                        <option value="Publikasi">Publikasi</option>
+                      </select>
+                      {error?.status && (
+                        <p className="text-xs text-red-500 mt-1">
+                          {error.status[0]}
+                        </p>
+                      )}
+                    </div>
                 </div>
                 <DialogFooter>
                   <Button
