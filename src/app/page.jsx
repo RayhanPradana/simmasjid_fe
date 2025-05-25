@@ -974,26 +974,22 @@ export default function Page() {
                     </li>
                 </ul>
                 </div>
-
-<div>
-  <h4 className="text-lg font-semibold text-green-800 mb-4">Lokasi Kami</h4>
-  <div className="w-full h-64 rounded-xl overflow-hidden relative group"> 
-    <iframe 
-      src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d31612.405149631515!2d112.64136!3d-7.941908!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd629c05c689559%3A0xf3162cc40350c050!2sSabilillah%20Mosque!5e0!3m2!1sen!2sid!4v1748175688880!5m2!1sen!2sid"
-      width="100%"
-      height="100%"
-      className="grayscale-[0.1] contrast-[1.1]"
-      style={{ border: 0 }}
-      allowFullScreen=""
-      loading="lazy"
-      referrerPolicy="no-referrer-when-downgrade"
-    ></iframe>
-  </div>
-</div>
-
+                <div>
+                  <h4 className="text-lg font-semibold text-green-800 mb-4">Lokasi Kami</h4>
+                  <div className="w-full h-64 rounded-xl overflow-hidden relative group"> 
+                    <iframe 
+                      src="https://www.google.com/maps/embed?pb=!1m14!1m8!1m3!1d31612.405149631515!2d112.64136!3d-7.941908!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x2dd629c05c689559%3A0xf3162cc40350c050!2sSabilillah%20Mosque!5e0!3m2!1sen!2sid!4v1748175688880!5m2!1sen!2sid"
+                      width="100%"
+                      height="100%"
+                      className="grayscale-[0.1] contrast-[1.1]"
+                      style={{ border: 0 }}
+                      allowFullScreen=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer-when-downgrade"
+                    ></iframe>
+                  </div>
                 </div>
-                
-
+                </div>
                 <div className="mt-12 pt-8 border-t border-gray-200">
                 <div className="flex flex-col md:flex-row justify-between items-center">
                     <p className="text-sm text-black mb-4 md:mb-0">
