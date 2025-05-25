@@ -413,7 +413,7 @@ export default function PembayaranPage() {
             setShowModal(true);
           } else if (type) {
             toast.error("Detail reservasi tidak ditemukan");
-            router.push('/landing-page/reservasi');
+            router.push('/home/reservasi');
           }
         }
       } catch (error) {

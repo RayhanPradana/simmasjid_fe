@@ -5,10 +5,10 @@ export default function AppSidebarUser() {
   const [isExpanded, setIsExpanded] = useState(false);
   
   const menuItems = [
-    { name: 'Reservasi', icon: <Calendar size={20} />, href: '/landing-page/reservasi' },
-    { name: 'Pembayaran', icon: <CreditCard size={20} />, href: '/landing-page/pembayaran' },
-    { name: 'Riwayat', icon: <Clock size={20} />, href: '/landing-page/riwayat' },
-    { name: 'Kembali ke Beranda', icon: <Home size={20} />, href: '/landing-page' }
+    { name: 'Reservasi', icon: <Calendar size={20} />, href: '/home/reservasi' },
+    { name: 'Pembayaran', icon: <CreditCard size={20} />, href: '/home/pembayaran' },
+    { name: 'Riwayat', icon: <Clock size={20} />, href: '/home/riwayat' },
+    { name: 'Kembali ke Beranda', icon: <Home size={20} />, href: '/' }
   ];
   
   return (

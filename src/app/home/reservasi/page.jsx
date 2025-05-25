@@ -442,7 +442,7 @@ export default function ReservasiPage() {
       // Redirect to reservations list or details page
       const reservationId = result.data && result.data.id ? result.data.id : 
                          (result.id ? result.id : 'success');
-      router.push(`/landing-page/riwayat`);
+      router.push(`/home/riwayat`);
     } catch (error) {
       console.error('Error submitting reservation:', error);
       toast.error("Gagal membuat reservasi. Periksa koneksi internet Anda.");
