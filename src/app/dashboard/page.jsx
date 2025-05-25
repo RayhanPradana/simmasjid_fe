@@ -48,17 +48,6 @@ export default function Page() {
   }
 
   return (
-    // <div className="p-4">
-    //   {isLoading ? (
-    //     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-    //       <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-    //         <h2 className="text-lg font-semibold mb-4">
-    //           Login terlebih dahulu...
-    //         </h2>
-    //       </div>
-    //     </div>
-    //   ) : (
-    //     <>
           <SidebarProvider>
             <AppSidebar />
             <SidebarInset>
@@ -87,7 +76,7 @@ export default function Page() {
               <main className="flex flex-1 flex-col gap-6 p-6 bg-gray-50 min-h-screen font-sans">
                 <section>
                   <h1 className="text-3xl font-bold text-[#00a63e]">
-                    Selamat datang di Dashboard, Admin Fulan!
+                    Selamat datang di Dashboard, Admin!
                   </h1>
                   <p className="text-gray-700 mt-1">
                     Berikut ringkasan aktivitas Masjid hari ini.
@@ -155,9 +144,6 @@ export default function Page() {
               </main>
             </SidebarInset>
           </SidebarProvider>
-    //     </>
-    //   )}
-    // </div>
   );
 }
 
