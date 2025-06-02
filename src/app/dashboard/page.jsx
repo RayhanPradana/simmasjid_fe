@@ -188,15 +188,15 @@ export default function Page() {
               ).length || 0,
             disetujui:
               result.data.reservasi_fasilitas?.filter(
-                (r) => r.status === "approved"
+                (r) => r.status === "disetujui"
               ).length || 0,
             belumLunas:
               result.data.reservasi_fasilitas?.filter(
-                (r) => r.status_pembayaran === "belum_lunas"
+                (r) => r.status_pembayaran === "menunggu lunas"
               ).length || 0,
             menungguKonfirmasi:
               result.data.reservasi_fasilitas?.filter(
-                (r) => r.status_pembayaran === "menunggu_konfirmasi"
+                (r) => r.status_pembayaran === "sedang berlangsung"
               ).length || 0,
             total: result.data.reservasi_fasilitas?.length || 0,
           },
