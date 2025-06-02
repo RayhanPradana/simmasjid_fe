@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -76,6 +75,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Badge } from "@/components/ui/badge"
 import toast from "react-hot-toast"
+
 
 const API_BASE_URL = "http://127.0.0.1:8000/api/reservasi"
 
@@ -991,49 +991,49 @@ export default function Page() {
                             <th className="p-3 text-left text-sm font-medium text-gray-900">No</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Fasilitas</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Acara</th>
-                            <th className="p-3 text-left text-sm font-medium text-gray-900">User</th>
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">Penyewa</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Tanggal</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Sesi</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Status</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Total Harga</th>
-                            <th className="p-3 text-left text-sm font-medium text-gray-900">Aksi</th>
+                            <th className="p-3 text-right text-sm font-medium text-gray-900">Aksi</th>
                           </tr>
                         </thead>
                         <tbody>
                           {currentItems.map((item, index) => (
                             <tr key={item.id} className="border-b hover:bg-gray-50">
-                              <td className="p-3 text-sm text-gray-900">
+                              <td className="p-3 text-sm text-gray-900 text-left">
                                 {indexOfFirstItem + index + 1}
                               </td>
-                              <td className="p-3 text-sm text-gray-900">
+                              <td className="p-3 text-sm text-gray-900 text-left">
                                 {getFasilitasName(item)}
                               </td>
-                              <td className="p-3 text-sm text-gray-900">
+                              <td className="p-3 text-sm text-gray-900 text-left">
                                 {getAcaraName(item)}
                               </td>
-                              <td className="p-3 text-sm text-gray-900">
+                              <td className="p-3 text-sm text-gray-900 text-left">
                                 {getUserName(item)}
                               </td>
-                              <td className="p-3 text-sm text-gray-900">
+                              <td className="p-3 text-sm text-gray-900 text-left">
                                 {new Date(item.tgl_reservasi).toLocaleDateString('id-ID')}
                               </td>
-                              <td className="p-3 text-sm text-gray-900">
+                              <td className="p-3 text-sm text-gray-900 text-left">
                                 <div className="space-y-1">
                                   <div>{getSesiNames(item.sesi)}</div>
                                   <div className="text-xs text-gray-500">{getSesiTimes(item.sesi)}</div>
                                 </div>
                               </td>
-                              <td className="p-3">
+                              <td className="p-3 text-left">
                                 <Badge className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded-full border ${getStatusBadgeClass(item.status_reservasi)}`}>
                                   {getStatusIcon(item.status_reservasi)}
                                   {item.status_reservasi}
                                 </Badge>
                               </td>
-                              <td className="p-3 text-sm text-gray-900 font-medium">
+                              <td className="p-3 text-sm text-gray-900 font-medium text-left">
                                 {formatRupiah(item.harga)}
                               </td>
                               <td className="p-3">
-                                <div className="flex items-center gap-1">
+                                <div className="flex items-center justify-end gap-1">
                                   <Button
                                     variant="ghost"
                                     size="sm"

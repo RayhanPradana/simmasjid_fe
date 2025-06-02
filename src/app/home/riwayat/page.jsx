@@ -199,7 +199,7 @@ export default function ReservasiPage() {
   const handlePayment = (reservationId, type) => {
     localStorage.setItem("pendingPaymentReservationId", reservationId);
     localStorage.setItem("paymentType", type); // 'dp' or 'remaining'
-    router.push('/landing-page/pembayaran');
+    router.push('/home/pembayaran');
   };
 
   const getStatusBadgeVariant = (status) => {
@@ -750,7 +750,7 @@ export default function ReservasiPage() {
                   Anda belum membuat reservasi apapun. Mulai dengan membuat reservasi pertama Anda.
                 </p>
                 <Button
-                  onClick={() => router.push('/landing-page/reservasi')}
+                  onClick={() => router.push('/home/reservasi')}
                   size="lg"
                   className="bg-blue-600 hover:bg-blue-700 text-white"
                 >

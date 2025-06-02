@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useRouter } from "next/navigation"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -38,6 +39,7 @@ import {
   Info, 
   Edit,
   Trash2,
+  X, // Add this import
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -59,8 +61,25 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog"
-import useAuthRedirect from "@/lib/auth";
-import { isLastDayOfMonth } from "date-fns"
+import Loading from "@/components/loading";
+
+
+// Define useAuthRedirect hook before using it
+const useAuthRedirect = () => {
+  const router = useRouter()
+  const [isLoggedIn, setIsLoggedIn] = useState(false)
+
+  useEffect(() => {
+    const token = localStorage.getItem("token")
+    if (!token) {
+      router.push("/login")
+    } else {
+      setIsLoggedIn(true)
+    }
+  }, [router])
+
+  return isLoggedIn
+}
 
 // API base URLs
 const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
@@ -105,6 +124,10 @@ export default function Page() {
     dpAmount: 0,
     remainingAmount: 0
   });
+
+  // New state variables for filters
+  const [nameFilter, setNameFilter] = useState("")
+  const [dateFilter, setDateFilter] = useState("")
 
   // Format date for display
   const formatDate = (dateString) => {
@@ -230,68 +253,74 @@ export default function Page() {
     )
   }
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const token = localStorage.getItem("token");
-        if (!token) return;
+  // Define fetchPayments function
+  const fetchPayments = async () => {
+    setIsLoading(true);
+    try {
+      const token = localStorage.getItem("token");
+      if (!token) return;
 
-        const response = await fetch(API_BASE_URL, {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`,
-          },
-        })
+      const response = await fetch(API_BASE_URL, {
+        method: "GET",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+      });
 
-        if (!response.ok) {
-          if (response.status === 401) {
-            toast({
-              title: "Sesi berakhir",
-              description: "Sesi login Anda telah berakhir. Silakan login kembali.",
-              variant: "destructive",
-            })
-            return
-          }
-          throw new Error(`HTTP error ${response.status}`)
+      if (!response.ok) {
+        if (response.status === 401) {
+          toast({
+            title: "Sesi berakhir",
+            description: "Sesi login Anda telah berakhir. Silakan login kembali.",
+            variant: "destructive",
+          });
+          return;
         }
-
-        const result = await response.json()
-        // The controller returns the data directly as an array
-        let paymentData = []
-        
-        if (Array.isArray(result)) {
-          paymentData = result
-        } else if (result && Array.isArray(result.data)) {
-          paymentData = result.data
-        }
-        setPayments(paymentData)
-        filterPaymentsByTab(paymentData, currentTab)
-        
-      } catch (error) {
-        console.error("Failed to fetch payments:", error)
-        toast({
-          title: "Error",
-          description: `Gagal memuat data pembayaran: ${error.message}`,
-          variant: "destructive",
-        })
-        setPayments([])
-        setFilteredPayments([])
-      } finally {
-        setIsLoading(false)
+        throw new Error(`HTTP error ${response.status}`);
       }
-    }
-    if (isLoggedIn) {
-      fetchData();
-    }
-  }, [currentTab, isLoggedIn]);
 
-  // Filter payments by tab and search term
+      const result = await response.json();
+      
+      let paymentData = [];
+      if (Array.isArray(result)) {
+        paymentData = result;
+      } else if (result && Array.isArray(result.data)) {
+        paymentData = result.data;
+      }
+      
+      setPayments(paymentData);
+      filterPaymentsByTab(paymentData, currentTab);
+      
+    } catch (error) {
+      console.error("Failed to fetch payments:", error);
+      toast({
+        title: "Error",
+        description: `Gagal memuat data pembayaran: ${error.message}`,
+        variant: "destructive",
+      });
+      setPayments([]);
+      setFilteredPayments([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchPayments();
+  }, []);
+
+  // Update useEffect for filters
+  useEffect(() => {
+    filterPaymentsByTab(payments, currentTab);
+  }, [searchTerm, nameFilter, dateFilter, currentTab, payments]); // Add nameFilter and dateFilter to dependencies
+
+  // Update filterPaymentsByTab function
   const filterPaymentsByTab = (paymentsData, tabValue) => {
-    if (!paymentsData.length) return
+    if (!paymentsData.length) return;
     
-    let filtered = [...paymentsData]
+    let filtered = [...paymentsData];
     
     // Filter by tab
     if (tabValue !== "all") {
@@ -306,36 +335,42 @@ export default function Page() {
       })
     }
     
-    // Then filter by search term
+    // Filter by search term
     if (searchTerm) {
+      const searchLower = searchTerm.toLowerCase();
       filtered = filtered.filter(item => {
-        const reservasiId = item.reservasi_fasilitas_id ? item.reservasi_fasilitas_id.toString().toLowerCase() : ""
-        const status = item.status ? item.status.toLowerCase() : ""
-        const jenis = item.jenis ? item.jenis.toLowerCase() : ""
-        const metode = item.metode_pembayaran ? item.metode_pembayaran.toLowerCase() : ""
-        
-        // Search in reservation data if available
-        let reservasiData = ""
-        if (item.reservasi) {
-          const reservasi = item.reservasi
-          const penyewaName = reservasi.nama || reservasi.nama || ""
-          reservasiData = `${reservasi.id || ""} ${reservasi.tgl_reservasi || ""} ${penyewaName}`.toLowerCase()
-        }
-        
-        const searchLower = searchTerm.toLowerCase()
+        const reservasiId = item.reservasi_fasilitas_id?.toString().toLowerCase() || "";
+        const status = item.status?.toLowerCase() || "";
+        const jenis = item.jenis?.toLowerCase() || "";
+        const metode = item.metode_pembayaran?.toLowerCase() || "";
         
         return (
           reservasiId.includes(searchLower) ||
           status.includes(searchLower) ||
           jenis.includes(searchLower) ||
-          metode.includes(searchLower) ||
-          reservasiData.includes(searchLower)
-        )
-      })
+          metode.includes(searchLower)
+        );
+      });
+    }
+
+    // Filter by tenant name
+    if (nameFilter) {
+      const nameLower = nameFilter.toLowerCase();
+      filtered = filtered.filter(item => {
+        const penyewaName = getPenyewaName(item)?.toLowerCase() || "";
+        return penyewaName.includes(nameLower);
+      });
+    }
+
+    // Filter by reservation date
+    if (dateFilter) {
+      filtered = filtered.filter(item => 
+        item?.reservasi?.tgl_reservasi === dateFilter
+      );
     }
     
-    setFilteredPayments(filtered)
-    setCurrentPage(1)
+    setFilteredPayments(filtered);
+    setCurrentPage(1);
   }
 
   // Handle detail view
@@ -482,69 +517,34 @@ export default function Page() {
 
   // Handle file selection
   const handleFileChange = (e) => {
-    const file = e.target.files[0]
+    const file = e.target.files[0];
     if (file) {
-      setSelectedFile(file)
+      // Update payment data
+      setPaymentData(prev => ({
+        ...prev,
+        bukti_transfer: file
+      }));
       
-      // Create preview URL
-      const reader = new FileReader()
+      // Create preview
+      const reader = new FileReader();
       reader.onloadend = () => {
-        setFilePreview(reader.result)
-      }
-      reader.readAsDataURL(file)
+        setFilePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   }
-
-// ⬇️ Taruh di luar useEffect (sebelum return atau sebelum useEffect)
-const fetchPayments = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch("http://127.0.0.1:8000/api/pembayaran", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-
-    const data = await response.json();
-    setPayments(data);
-    setFilteredPayments(data);
-  } catch (error) {
-    console.error("Gagal mengambil data pembayaran:", error);
-  }
-};
-
-// ⬇️ useEffect-nya tetap seperti ini
-useEffect(() => {
-  if (isLoggedIn) {
-    fetchPayments();
-  }
-}, [isLoggedIn]);
-
-
-
-
 
   // Handle tab change
   const handleTabChange = (value) => {
     setCurrentTab(value)
     filterPaymentsByTab(payments, value)
   }
+  
 
   // Handle search
   useEffect(() => {
     filterPaymentsByTab(payments, currentTab)
   }, [searchTerm, payments, currentTab])
-
-  // Load data when component mounts
-  // useEffect(() => {
-  //   fetchPayments()
-  // }, [])
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
@@ -568,16 +568,21 @@ useEffect(() => {
 
   // Get penyewa name from reservasi
   const getPenyewaName = (item) => {
-    if (!item || !item.reservasi) return "-"
+    if (!item) return "-"
     
-    const reservasi = item.reservasi
+    // First try to get from nama_penyewa field
+    if (item.nama_penyewa) {
+      return item.nama_penyewa
+    }
     
-    // Try different possible paths to get user name
-    return reservasi.penyewa?.nama || // if penyewa object exists
-           reservasi.user?.nama ||     // if user object exists
-           reservasi.nama_penyewa ||   // if direct field exists
-           reservasi.nama ||           // fallback to nama
-           "-"                         // default if no name found
+    // Then try to get from nested relations
+    if (item.reservasi) {
+      if (item.reservasi.user) {
+        return item.reservasi.user.name
+      }
+    }
+    
+    return "-"
   }
 
   // Get price from reservasi
@@ -707,20 +712,12 @@ useEffect(() => {
     );
   };
 
-    if (isLoggedIn === null) {
-    return;
-  }
-
-  if (isLoggedIn === false) {
+  if (!isLoggedIn) {
     return (
-      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
-          <h2 className="text-lg font-semibold mb-4">
-            Login terlebih dahulu...
-          </h2>
-        </div>
+      <div className="flex h-screen w-full items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin" />
       </div>
-    );
+    )
   }
 
   return (
@@ -781,16 +778,48 @@ useEffect(() => {
                 </Tabs>
 
                 {/* Pencarian */}
-                <div className="flex items-center mb-4">
+                <div className="flex items-center gap-4 mb-4">
                   <div className="relative flex-1">
                     <Search className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
                     <Input
-                      placeholder="Cari berdasarkan nama penyewa, ID reservasi..."
-                      className="pl-10 w-full"
+                      placeholder="Cari berdasarkan ID, status, atau metode..."
+                      className="pl-10"
                       value={searchTerm}
                       onChange={(e) => setSearchTerm(e.target.value)}
                     />
                   </div>
+                  <div className="relative flex-1">
+                    <User className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
+                    <Input
+                      placeholder="Cari berdasarkan nama penyewa..."
+                      className="pl-10"
+                      value={nameFilter}
+                      onChange={(e) => setNameFilter(e.target.value)}
+                    />
+                  </div>
+                  <div className="w-48">
+                    <Input
+                      type="date"
+                      className="w-full"
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                    />
+                  </div>
+                  {(searchTerm || nameFilter || dateFilter) && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        setSearchTerm("")
+                        setNameFilter("")
+                        setDateFilter("")
+                      }}
+                      className="flex items-center gap-1"
+                    >
+                      <X className="h-4 w-4" />
+                      Reset Filter
+                    </Button>
+                  )}
                 </div>
 
                 {/* Tabel Data */}
@@ -799,7 +828,7 @@ useEffect(() => {
                     {/* Header Tabel */}
                     <thead>
                       <tr className="bg-gray-50">
-                        <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Reservasi</th>
+                        {/* <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID Reservasi</th> */}
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Tgl Reservasi</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Penyewa</th>
                         <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Jenis Pembayaran</th>
@@ -827,7 +856,7 @@ useEffect(() => {
                       ) : currentItems.length > 0 ? (
                         currentItems.map((item) => (
                           <tr key={item.id} className="hover:bg-gray-50">
-                            <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">#{item.reservasi_fasilitas_id}</td>
+                            {/* <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900 font-medium">#{item.reservasi_fasilitas_id}</td> */}
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{getReservasiDate(item)}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">{getPenyewaName(item)}</td>
                             <td className="px-4 py-3 whitespace-nowrap text-sm text-gray-900">
@@ -1025,39 +1054,7 @@ useEffect(() => {
                     <p className="text-sm font-medium">{formatDate(detailItem.tgl_pembayaran)}</p>
                   </div>
                 )}
-                
-                {detailItem.bukti_transfer && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">
-                      <FileText className="h-4 w-4 inline mr-1" /> Bukti Transfer
-                    </Label>
-                    <div className="mt-2">
-                      <img 
-                        src={detailItem.bukti_transfer} 
-                        alt="Bukti Transfer" 
-                        className="max-w-full h-auto max-h-48 rounded border"
-                        onError={(e) => {
-                          e.target.style.display = 'none'
-                          e.target.nextSibling.style.display = 'block'
-                        }}
-                      />
-                      <div className="hidden p-4 border rounded bg-gray-50 text-center">
-                        <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                        <p className="text-sm text-gray-500">File tidak dapat ditampilkan</p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {detailItem.catatan && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">
-                      <Info className="h-4 w-4 inline mr-1" /> Catatan
-                    </Label>
-                    <p className="text-sm">{detailItem.catatan}</p>
-                  </div>
-                )}
-                
+
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label className="text-sm font-medium text-gray-500">
@@ -1068,6 +1065,38 @@ useEffect(() => {
                     </p>
                   </div>
                 </div>
+                
+                {detailItem.bukti_transfer && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <FileText className="h-4 w-4 inline mr-1" /> Bukti Transfer
+                    </Label>
+                    <div className="mt-2">
+                      <img 
+                        src={`http://127.0.0.1:8000/storage/${detailItem.bukti_transfer}`}
+                        alt="Bukti Transfer" 
+                        className="max-w-full h-auto max-h-48 rounded border"
+                        onError={(e) => {
+                          e.target.style.display = 'none';
+                          e.target.nextSibling.style.display = 'block';
+                        }}
+                      />
+                      <div className="hidden p-4 border rounded bg-gray-50 text-center">
+                        <FileText className="h-8 w-8 mx-auto mb-2 text-gray-400" />
+                        <p className="text-sm text-gray-500">Bukti transfer tidak dapat ditampilkan</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                {/* {detailItem.catatan && (
+                  <div>
+                    <Label className="text-sm font-medium text-gray-500">
+                      <Info className="h-4 w-4 inline mr-1" /> Catatan
+                    </Label>
+                    <p className="text-sm">{detailItem.catatan}</p>
+                  </div>
+                )} */}
               </div>
             )}
             <DialogFooter>
