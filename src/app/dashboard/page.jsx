@@ -217,13 +217,13 @@ export default function Page() {
     }
   };
 
-  const formatRupiah = (amount) => {
-    const formatter = new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
-    return `Rp ${formatter.format(amount)}`;
-  };
+  // const formatRupiah = (amount) => {
+  //   const formatter = new Intl.NumberFormat('id-ID', {
+  //     minimumFractionDigits: 0,
+  //     maximumFractionDigits: 0
+  //   });
+  //   return `Rp ${formatter.format(amount)}`;
+  // };
 
   const formatCompactRupiah = (amount) => {
     const formatter = new Intl.NumberFormat('id-ID', {
