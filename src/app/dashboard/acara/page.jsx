@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect } from "react"
@@ -69,7 +68,11 @@ export default function Page() {
   const [formData, setFormData] = useState({ 
     nama_acara: "", 
     deskripsi: "", 
-    harga: ""
+    harga: "",
+    gambar: null,
+    status: "tersedia",
+    touched: {},
+    namaDuplicate: false
   })
   const [isEditing, setIsEditing] = useState(false)
   const [currentPage, setCurrentPage] = useState(1)
@@ -155,14 +158,22 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
+      const formDataToSend = new FormData()
+      formDataToSend.append('nama_acara', eventData.nama_acara)
+      formDataToSend.append('deskripsi', eventData.deskripsi)
+      formDataToSend.append('harga', eventData.harga)
+      formDataToSend.append('status', eventData.status)
+      if (eventData.gambar) {
+        formDataToSend.append('gambar', eventData.gambar)
+      }
+
       const response = await fetch(`${API_BASE_URL}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(eventData),
+        body: formDataToSend,
       })
       
       const result = await response.json()
@@ -181,22 +192,36 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
+      const formDataToSend = new FormData()
+      // Add _method field for Laravel to handle PUT request
+      formDataToSend.append('_method', 'PUT')
+      formDataToSend.append('nama_acara', eventData.nama_acara)
+      formDataToSend.append('deskripsi', eventData.deskripsi)
+      formDataToSend.append('harga', eventData.harga)
+      formDataToSend.append('status', eventData.status)
+      if (eventData.gambar) {
+        formDataToSend.append('gambar', eventData.gambar)
+      }
+
       const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "PUT",
+        method: "POST", // Keep as POST for FormData
         headers: {
-          "Content-Type": "application/json",
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(eventData),
+        body: formDataToSend,
       })
       
       const result = await response.json()
       if (result && result.status === "success") {
         toast.success("Data Acara berhasil diperbarui");
+        setIsAddModalOpen(false);
+      } else {
+        toast.error(result.message || "Gagal memperbarui data");
       }
     } catch (error) {
       console.error("Gagal memperbarui acara:", error)
+      toast.error("Gagal memperbarui data");
     } finally {
       fetchEvents()
       setIsLoading(false)
@@ -241,10 +266,18 @@ export default function Page() {
 
   // Modifikasi handleInputChange untuk langsung mengecek duplikasi saat input berubah
   const handleInputChange = (e) => {
-    const { name, value } = e.target;
+    const { name, value, type, files } = e.target;
     
-    // Handle harga input - only allow numbers
-    if (name === 'harga') {
+    if (type === 'file') {
+      setFormData(prev => ({
+        ...prev,
+        [name]: files[0],
+        touched: {
+          ...prev.touched,
+          [name]: true
+        }
+      }));
+    } else if (name === 'harga') {
       const numericValue = value.replace(/[^0-9]/g, '');
       setFormData(prev => ({
         ...prev,
@@ -276,6 +309,8 @@ export default function Page() {
       nama_acara: "", 
       deskripsi: "", 
       harga: "",
+      status: "tersedia",
+      gambar: null,
       touched: {},
       namaDuplicate: false
     });
@@ -283,13 +318,16 @@ export default function Page() {
     setIsAddModalOpen(true);
   };
 
-  // Fixed handleEdit to include touched property and reset namaDuplicate
+  // Update handleEdit to include gambar_url for showing existing image
   const handleEdit = (item) => {
     setFormData({
       id: item.id,
       nama_acara: item.nama_acara || "",
       deskripsi: item.deskripsi || "",
       harga: item.harga || "",
+      status: item.status || "tersedia",
+      gambar: null,
+      gambar_url: item.gambar_url, // Add this to show existing image
       touched: {},
       namaDuplicate: false
     });
@@ -297,30 +335,61 @@ export default function Page() {
     setIsAddModalOpen(true);
   };
 
+  // Add handleFileChange function
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type and size
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg'];
+      const maxSize = 2 * 1024 * 1024; // 2MB
+
+      if (!validTypes.includes(file.type)) {
+        toast.error('Format file harus jpeg, png, atau jpg');
+        e.target.value = '';
+        return;
+      }
+
+      if (file.size > maxSize) {
+        toast.error('Ukuran file maksimal 2MB');
+        e.target.value = '';
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, gambar: file }));
+    }
+  };
+
   const handleFormSubmit = () => {
     if (!formData.nama_acara) {
-      toast({ title: "Error", description: "Nama acara wajib diisi", variant: "destructive" })
-      return
+      toast.error("Nama acara wajib diisi");
+      return;
     }
 
     if (!formData.harga) {
-      toast({ title: "Error", description: "Harga acara wajib diisi", variant: "destructive" })
-      return
+      toast.error("Harga acara wajib diisi");
+      return;
     }
 
-    // Prepare data for submission
+    if (!formData.status) {
+      toast.error("Status acara wajib diisi");
+      return;
+    }
+
+    // Prepare data for submission with FormData
     const submitData = {
       nama_acara: formData.nama_acara,
-      deskripsi: formData.deskripsi,
-      harga: parseInt(formData.harga)
+      deskripsi: formData.deskripsi || '',
+      harga: parseInt(formData.harga),
+      status: formData.status,
+      gambar: formData.gambar
     };
 
     if (isEditing) {
-      updateEvent(formData.id, submitData)
+      updateEvent(formData.id, submitData);
     } else {
-      createEvent(submitData)
+      createEvent(submitData);
     }
-    setIsAddModalOpen(false)
+    setIsAddModalOpen(false);
   }
 
   const handleDeleteClick = (item) => {
@@ -436,10 +505,11 @@ export default function Page() {
                     <table className="min-w-full divide-y divide-gray-200">
                       <thead>
                         <tr className="bg-gray-50">
-                          {/* <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider w-16">ID</th> */}
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Gambar</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nama Acara</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Deskripsi</th>
                           <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Harga</th>
+                          <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
                           <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider w-32">Aksi</th>
                         </tr>
                       </thead>
@@ -447,7 +517,22 @@ export default function Page() {
                         {currentItems.length > 0 ? (
                           currentItems.map((item) => (
                             <tr key={item.id} className="hover:bg-gray-50">
-                              {/* <td className="px-4 py-3 text-sm text-gray-900">{item.id}</td> */}
+                              <td className="px-4 py-3">
+                                {item.gambar_url ? (
+                                  <img
+                                    src={item.gambar_url}
+                                    alt={item.nama_acara}
+                                    className="h-16 w-16 object-cover rounded-md"
+                                    onError={(e) => {
+                                      e.target.src = "https://placehold.co/64x64?text=No+Image";
+                                    }}
+                                  />
+                                ) : (
+                                  <div className="h-16 w-16 bg-gray-100 rounded-md flex items-center justify-center">
+                                    <span className="text-gray-400 text-xs text-center">No Image</span>
+                                  </div>
+                                )}
+                              </td>
                               <td className="px-4 py-3 text-sm text-gray-900">{item.nama_acara}</td>
                               <td className="px-4 py-3 text-sm text-gray-900 truncate max-w-xs">
                                 {item.deskripsi && item.deskripsi.length > 70 
@@ -456,6 +541,13 @@ export default function Page() {
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-900">
                                 {formatCurrency(item.harga)}
+                              </td>
+                              <td className="px-4 py-3 text-sm text-gray-900">
+                                <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                                  item.status === 'tersedia' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                                }`}>
+                                  {item.status === 'tersedia' ? 'Tersedia' : 'Tidak Tersedia'}
+                                </span>
                               </td>
                               <td className="px-4 py-3 text-right text-sm font-medium">
                                 <div className="flex justify-end gap-2">
@@ -474,7 +566,7 @@ export default function Page() {
                           ))
                         ) : (
                           <tr>
-                            <td colSpan="5" className="px-4 py-6 text-center text-sm text-gray-500">
+                            <td colSpan="6" className="px-4 py-6 text-center text-sm text-gray-500">
                               {searchTerm ? "Tidak ada hasil pencarian" : "Tidak ada data acara"}
                             </td>
                           </tr>
@@ -586,6 +678,51 @@ export default function Page() {
                           </p>
                         )}
                     </div>
+                    <div className="grid gap-2">
+                        <Label>Gambar</Label>
+                        <Input
+                          type="file"
+                          name="gambar"
+                          accept="image/jpeg,image/png,image/jpg"
+                          onChange={handleFileChange}
+                          disabled={isLoading}
+                        />
+                        <p className="text-xs text-gray-500">
+                          Format: JPEG, PNG, JPG (Max. 2MB)
+                        </p>
+                        {formData.gambar ? (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500">File terpilih: {formData.gambar.name}</p>
+                            <img
+                              src={URL.createObjectURL(formData.gambar)}
+                              alt="Preview"
+                              className="mt-2 h-32 w-32 object-cover rounded-md"
+                            />
+                          </div>
+                        ) : formData.gambar_url ? (
+                          <div className="mt-2">
+                            <p className="text-sm text-gray-500">Gambar saat ini:</p>
+                            <img
+                              src={formData.gambar_url}
+                              alt="Current"
+                              className="mt-2 h-32 w-32 object-cover rounded-md"
+                            />
+                          </div>
+                        ) : null}
+                    </div>
+                    <div className="grid gap-2">
+                        <Label htmlFor="status">Status <span className="text-red-500">*</span></Label>
+                        <select
+                          id="status"
+                          name="status"
+                          value={formData.status}
+                          onChange={handleInputChange}
+                          className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                          <option value="tersedia">Tersedia</option>
+                          <option value="tidaktersedia">Tidak Tersedia</option>
+                        </select>
+                    </div>
                     </div>
                     <DialogFooter>
                     <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>Batal</Button>
@@ -640,6 +777,38 @@ export default function Page() {
                           <p className="col-span-2 font-semibold text-green-600">
                             {formatCurrency(detailItem.harga)}
                           </p>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <p className="font-medium text-gray-500">Gambar:</p>
+                          <div className="col-span-2">
+                            {detailItem.gambar_url ? (
+                              <img 
+                                src={detailItem.gambar_url} 
+                                alt={detailItem.nama_acara}
+                                className="max-w-[200px] rounded-md"
+                                onError={(e) => {
+                                  console.log("Error loading detail image:", detailItem.gambar_url);
+                                  e.target.style.display = 'none';
+                                  const placeholder = document.createElement('p');
+                                  placeholder.className = 'text-gray-500';
+                                  placeholder.textContent = 'Gambar tidak dapat dimuat';
+                                  e.target.parentNode.appendChild(placeholder);
+                                }}
+                              />
+                            ) : (
+                              <p className="text-gray-500">Tidak ada gambar</p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-3 gap-2">
+                          <p className="font-medium text-gray-500">Status:</p>
+                          <div className="col-span-2">
+                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                              detailItem.status === 'tersedia' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                            }`}>
+                              {detailItem.status === 'tersedia' ? 'Tersedia' : 'Tidak Tersedia'}
+                            </span>
+                          </div>
                         </div>
                       </div>
                     )}

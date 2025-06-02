@@ -593,7 +593,7 @@ export default function ReservasiPage() {
               <h2 className="text-2xl font-semibold mb-6 text-center">Pilih Jenis Acara</h2>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {acara.map(item => (
+                {acara.filter(item => item.status === 'tersedia').map(item => (
                   <div 
                     key={item.id}
                     onClick={() => handleAcaraSelect(item.id.toString())}
@@ -602,13 +602,24 @@ export default function ReservasiPage() {
                     }`}
                   >
                     <div className="h-40 bg-green-100 flex items-center justify-center">
-                      <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-                        </svg>
-                      </div>
+                      {item.gambar ? (
+                        <img
+                          src={`http://127.0.0.1:8000/storage/${item.gambar}`}
+                          alt={item.nama_acara}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = "https://placehold.co/400x400?text=No+Image";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
-                    <div className="p-4">
+                    <div className="p-4"> 
                       <h3 className="font-bold text-lg mb-2">{item.nama_acara}</h3>
                       <p className="text-gray-600 mb-2">{item.deskripsi?.substring(0, 80) || "Tidak ada deskripsi"}...</p>
                       <div className="flex justify-between items-center mt-2">
@@ -640,7 +651,7 @@ export default function ReservasiPage() {
               </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {fasilitas.map(item => (
+                {fasilitas.filter(item => item.status === 'tersedia').map(item => (
                   <div 
                     key={item.id}
                     onClick={() => handleFasilitasSelect(item.id.toString())}
@@ -649,11 +660,22 @@ export default function ReservasiPage() {
                     }`}
                   >
                     <div className="h-40 bg-green-100 flex items-center justify-center">
-                      <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                        </svg>
-                      </div>
+                      {item.gambar ? (
+                        <img
+                          src={`http://127.0.0.1:8000/storage/${item.gambar}`}
+                          alt={item.nama_fasilitas}
+                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            e.target.src = "https://placehold.co/400x400?text=No+Image";
+                          }}
+                        />
+                      ) : (
+                        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                          </svg>
+                        </div>
+                      )}
                     </div>
                     <div className="p-4">
                       <h3 className="font-bold text-lg mb-2">{item.nama_fasilitas}</h3>

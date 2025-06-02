@@ -43,6 +43,7 @@ export function AppSidebar() {
   const [expandedItems, setExpandedItems] = React.useState({});
   const [activeItem, setActiveItem] = React.useState("");
   const [isNavigating, setIsNavigating] = React.useState(false);
+  const [isLoading, setIsLoading] = React.useState(true);
 
   const toggleExpand = (title) => {
     setExpandedItems(prev => ({
@@ -88,6 +89,11 @@ export function AppSidebar() {
     // Set active item based on current URL
     setActiveItem(pathname);
   }, [pathname]);
+
+  React.useEffect(() => {
+    // Wait for component to mount before showing animations
+    setIsLoading(false);
+  }, []);
 
   const navItems = [
     {
@@ -259,23 +265,22 @@ export function AppSidebar() {
     );
   };
 
+  // Update page transition settings to be more subtle
+  const pageTransition = {
+    duration: 0.1,
+    ease: "linear"
+  };
+
+  // Modify the return statement
   return (
     <Sidebar>
       <SidebarHeader>
         <TeamSwitcher teams={[{ name: "SIMASJID", logo: Wallet, url: "/dashboard" }]} />
       </SidebarHeader>
       <SidebarContent>
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={pathname}
-            initial={isNavigating ? { opacity: 0, y: 5 } : false}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -5 }}
-            transition={{ duration: 0.25 }}
-          >
-            <CustomNavMain items={navItems} />
-          </motion.div>
-        </AnimatePresence>
+        <div className={`transition-opacity duration-200 ${isLoading ? 'opacity-0' : 'opacity-100'}`}>
+          <CustomNavMain items={navItems} />
+        </div>
       </SidebarContent>
       <SidebarFooter>
         <NavUser user={user} />
