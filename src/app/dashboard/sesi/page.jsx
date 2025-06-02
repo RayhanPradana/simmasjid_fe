@@ -54,6 +54,7 @@ import {
 import { Textarea } from "@/components/ui/textarea"
 import toast from "react-hot-toast";
 
+
 export default function Page() {
   const API_BASE_URL = "http://127.0.0.1:8000/api/sesi"
 
@@ -280,6 +281,24 @@ export default function Page() {
       [name]: undefined
     }));
     
+    // Special handling for deskripsi field
+    if (name === 'deskripsi') {
+      // Only allow numbers
+      const numericValue = value.replace(/[^0-9]/g, '');
+      // Format as "Sesi-X"
+      const formattedValue = numericValue ? `Sesi-${numericValue}` : '';
+      
+      setFormData(prev => ({
+        ...prev,
+        [name]: formattedValue,
+        touched: {
+          ...prev.touched,
+          [name]: true
+        }
+      }));
+      return;
+    }
+
     setFormData(prev => ({
       ...prev,
       [name]: value,
@@ -562,16 +581,18 @@ export default function Page() {
                         )}
                     </div>
                     <div className="grid gap-2">
-                        <Label htmlFor="deskripsi">Deskripsi</Label>
-                        <Textarea
+                        <Label htmlFor="deskripsi">Deskripsi (Nomor Sesi) <span className="text-red-500">*</span></Label>
+                        <Input
                           id="deskripsi"
                           name="deskripsi"
                           value={formData.deskripsi}
                           onChange={handleInputChange}
-                          placeholder="Isi deskripsi sesi di sini..."
-                          rows={3}
+                          placeholder="Contoh: masukkan angka 1 untuk Sesi-1"
                           className={formErrors.deskripsi ? "border-red-500" : ""}
                         />
+                        <p className="text-xs text-gray-500">
+                          Masukkan angka untuk membuat format Sesi-X (contoh: 1 akan menjadi Sesi-1)
+                        </p>
                         {formErrors.deskripsi && (
                           <p className="text-sm text-red-500 mt-1">{formErrors.deskripsi}</p>
                         )}
