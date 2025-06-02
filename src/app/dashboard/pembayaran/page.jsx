@@ -59,6 +59,8 @@ import {
   AlertDialogCancel,
   AlertDialogAction,
 } from "@/components/ui/alert-dialog"
+import useAuthRedirect from "@/lib/auth";
+import { isLastDayOfMonth } from "date-fns"
 
 // API base URLs
 const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
@@ -256,7 +258,6 @@ export default function Page() {
         }
 
         const result = await response.json()
-        
         // The controller returns the data directly as an array
         let paymentData = []
         
@@ -265,7 +266,6 @@ export default function Page() {
         } else if (result && Array.isArray(result.data)) {
           paymentData = result.data
         }
-        
         setPayments(paymentData)
         filterPaymentsByTab(paymentData, currentTab)
         
@@ -282,9 +282,10 @@ export default function Page() {
         setIsLoading(false)
       }
     }
-    
-    fetchData();
-  }, [currentTab]);
+    if (isLoggedIn) {
+      fetchData();
+    }
+  }, [currentTab, isLoggedIn]);
 
   // Filter payments by tab and search term
   const filterPaymentsByTab = (paymentsData, tabValue) => {
@@ -494,6 +495,41 @@ export default function Page() {
     }
   }
 
+// ⬇️ Taruh di luar useEffect (sebelum return atau sebelum useEffect)
+const fetchPayments = async () => {
+  try {
+    const token = localStorage.getItem("token");
+    const response = await fetch("http://127.0.0.1:8000/api/pembayaran", {
+      method: "GET",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error ${response.status}`);
+    }
+
+    const data = await response.json();
+    setPayments(data);
+    setFilteredPayments(data);
+  } catch (error) {
+    console.error("Gagal mengambil data pembayaran:", error);
+  }
+};
+
+// ⬇️ useEffect-nya tetap seperti ini
+useEffect(() => {
+  if (isLoggedIn) {
+    fetchPayments();
+  }
+}, [isLoggedIn]);
+
+
+
+
+
   // Handle tab change
   const handleTabChange = (value) => {
     setCurrentTab(value)
@@ -506,9 +542,9 @@ export default function Page() {
   }, [searchTerm, payments, currentTab])
 
   // Load data when component mounts
-  useEffect(() => {
-    fetchPayments()
-  }, [])
+  // useEffect(() => {
+  //   fetchPayments()
+  // }, [])
 
   // Pagination
   const indexOfLastItem = currentPage * itemsPerPage
@@ -670,6 +706,22 @@ export default function Page() {
       </select>
     );
   };
+
+    if (isLoggedIn === null) {
+    return;
+  }
+
+  if (isLoggedIn === false) {
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
+        <div className="bg-white p-6 rounded-lg shadow-lg text-center">
+          <h2 className="text-lg font-semibold mb-4">
+            Login terlebih dahulu...
+          </h2>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <SidebarProvider>
