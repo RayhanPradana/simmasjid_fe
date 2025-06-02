@@ -207,9 +207,7 @@ export default function PembayaranPage() {
     return new Date(dateString).toLocaleDateString('id-ID', {
       day: 'numeric',
       month: 'long',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+      year: 'numeric'
     });
   };
 
@@ -238,6 +236,24 @@ export default function PembayaranPage() {
       case 'lunas':
       case 'pelunasan':
         return 'bg-green-100 text-green-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
+
+  const getStatusTypeBadge = (type) => {
+    switch (type?.toLowerCase()) {
+      case 'dp':
+        return 'bg-blue-100 text-blue-800';
+      case 'lunas':
+      case 'pelunasan':
+      case 'paid':
+        return 'bg-green-100 text-green-800';
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'belum lunas':
+      case 'unpaid':
+        return 'bg-red-100 text-red-800';
       default:
         return 'bg-gray-100 text-gray-800';
     }
@@ -511,9 +527,6 @@ export default function PembayaranPage() {
                           Tanggal
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                          Reservasi
-                        </th>
-                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                           Jenis
                         </th>
                         <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -534,15 +547,7 @@ export default function PembayaranPage() {
                       {paymentHistory.map((payment, index) => (
                         <tr key={payment.id || index} className="hover:bg-gray-50">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(payment.created_at || payment.tanggal)}
-                          </td>
-                          <td className="px-6 py-4 whitespace-nowrap">
-                            <div className="text-sm text-gray-900">
-                              {payment.reservasi?.fasilitas?.nama_fasilitas || 'N/A'}
-                            </div>
-                            <div className="text-sm text-gray-500">
-                              {payment.reservasi?.acara?.nama_acara || 'N/A'}
-                            </div>
+                            {formatDate(payment.reservasi?.tgl_reservasi || payment.tanggal)}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
                             <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeBadge(payment.jenis)}`}>
@@ -556,11 +561,11 @@ export default function PembayaranPage() {
                             {payment.metode_pembayaran || payment.metode}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(payment.status)}`}>
-                              {payment.status === 'pending' ? 'Menunggu' : 
-                               payment.status === 'approved' ? 'Disetujui' :
-                               payment.status === 'confirmed' ? 'Dikonfirmasi' :
-                               payment.status === 'rejected' ? 'Ditolak' :
+                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusTypeBadge(payment.status)}`}>
+                              {payment.status === 'pending' ? 'Menunggu' :
+                               payment.status === 'paid' ? 'Dibayar' :
+                               payment.status === 'unpaid' ? 'Belum Dibayar' :
+                               payment.status === 'belum lunas' ? 'Belum Lunas' :
                                payment.status || 'Unknown'}
                             </span>
                           </td>
@@ -577,13 +582,15 @@ export default function PembayaranPage() {
                               </button>
                               {payment.bukti_transfer && (
                                 <a
-                                  href={payment.bukti_transfer}
+                                  href={`http://127.0.0.1:8000/storage/${payment.bukti_transfer}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-green-600 hover:text-green-900"
                                 >
                                   <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
+                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+                                    />
                                   </svg>
                                 </a>
                               )}
@@ -763,7 +770,7 @@ export default function PembayaranPage() {
                   </select>
                 </div>
 
-                <div>
+                {/* <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Jumlah Pembayaran
                   </label>
@@ -777,7 +784,7 @@ export default function PembayaranPage() {
                       }
                     </span>
                   </div>
-                </div>
+                </div> */}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -858,16 +865,18 @@ export default function PembayaranPage() {
                         <span className="font-medium">#{detailItem.reservasi_fasilitas_id}</span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-gray-600">Fasilitas:</span>{' '}
-                        <span className="font-medium">{detailItem.reservasi?.fasilitas?.nama_fasilitas || 'N/A'}</span>
-                      </p>
-                      <p className="text-sm">
-                        <span className="text-gray-600">Acara:</span>{' '}
-                        <span className="font-medium">{detailItem.reservasi?.acara?.nama_acara || 'N/A'}</span>
-                      </p>
-                      <p className="text-sm">
                         <span className="text-gray-600">Tanggal Reservasi:</span>{' '}
                         <span className="font-medium">{formatDate(detailItem.reservasi?.tgl_reservasi)}</span>
+                      </p>
+                      <p className="text-sm">
+                        <span className="text-gray-600">Status Pembayaran:</span>{' '}
+                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusTypeBadge(detailItem.status)}`}>
+                          {detailItem.status === 'pending' ? 'Menunggu' :
+                           detailItem.status === 'paid' ? 'Dibayar' :
+                           detailItem.status === 'unpaid' ? 'Belum Dibayar' :
+                           detailItem.status === 'belum lunas' ? 'Belum Lunas' :
+                           detailItem.status?.toUpperCase() || 'Unknown'}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -878,7 +887,10 @@ export default function PembayaranPage() {
                       <p className="text-sm">
                         <span className="text-gray-600">Jenis Pembayaran:</span>{' '}
                         <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeBadge(detailItem.jenis)}`}>
-                          {detailItem.jenis?.toUpperCase()}
+                          {detailItem.jenis === 'dp' ? 'DP' : 
+                           detailItem.jenis === 'lunas' ? 'Lunas' :
+                           detailItem.jenis === 'pelunasan' ? 'Pelunasan' :
+                           detailItem.jenis?.toUpperCase()}
                         </span>
                       </p>
                       <p className="text-sm">
@@ -889,12 +901,6 @@ export default function PembayaranPage() {
                         <span className="text-gray-600">Metode:</span>{' '}
                         <span className="font-medium capitalize">{detailItem.metode_pembayaran}</span>
                       </p>
-                      <p className="text-sm">
-                        <span className="text-gray-600">Status:</span>{' '}
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusBadge(detailItem.status)}`}>
-                          {detailItem.status?.toUpperCase()}
-                        </span>
-                      </p>
                     </div>
                   </div>
                 </div>
@@ -904,9 +910,13 @@ export default function PembayaranPage() {
                     <h4 className="font-medium text-gray-700 mb-2">Bukti Transfer</h4>
                     <div className="border border-gray-200 rounded-lg p-2">
                       <img
-                        src={detailItem.bukti_transfer}
+                        src={`http://127.0.0.1:8000/storage/${detailItem.bukti_transfer}`}
                         alt="Bukti transfer"
                         className="max-h-64 object-contain mx-auto"
+                        onError={(e) => {
+                          e.target.onerror = null;
+                          e.target.src = '/placeholder-image.png'; // Gambar placeholder jika gagal load
+                        }}
                       />
                     </div>
                   </div>

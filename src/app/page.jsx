@@ -10,6 +10,8 @@ import FullCalendar from "@fullcalendar/react";
 import dayGridPlugin from "@fullcalendar/daygrid";
 import interactionPlugin from "@fullcalendar/interaction";
 import toast from "react-hot-toast";
+import axios from 'axios';
+import Marquee from 'react-fast-marquee';
 import {
   NavigationMenu,
   NavigationMenuList,
@@ -43,6 +45,8 @@ import {
   LogOut,
   isLoggedIn,
   MapPin,
+  CreditCard,
+  CheckCircle
 } from "lucide-react";
 
 export function ModalJadwal({ data, onClose, onEventClick }) {
@@ -145,10 +149,13 @@ export default function Page() {
   const router = useRouter();
   const [selectedKegiatan, setSelectedKegiatan] = useState(null);
   const [data, setData] = useState([]);
+  const [data1, setData1] = useState([]);
   const [showModal, setShowModal] = useState(false);
   const [scrollY, setScrollY] = useState(0);
   const [activeSection, setActiveSection] = useState("home");
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [prayerTimes, setPrayerTimes] = useState(null);
+  const [currentCity, setCurrentCity] = useState('Malang');
   
   const sections = [
     { id: "home", label: "Beranda", icon: <Home size={16} /> },
@@ -194,7 +201,7 @@ export default function Page() {
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [userName, setUserName] = useState("Admin");
     const [userImage, setUserImage] = useState(null);
-
+    // Remove duplicate currentStep declaration since it's already declared below
     useEffect(() => {
       if (typeof window !== "undefined") {
         const storedUser = localStorage.getItem("user");
@@ -293,6 +300,41 @@ export default function Page() {
     fetchData();
   }, []);
 
+  useEffect(() => {
+    const fetchAllData = async () => {
+      try {
+        const token = localStorage.getItem("token");
+
+        if (!token) {
+          return;
+        }
+
+        const headers = {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        };
+
+        const [jadwalRes, beritaRes] = await Promise.all([
+          fetch("http://127.0.0.1:8000/api/jadwal1", { headers }),
+          fetch("http://127.0.0.1:8000/api/berita1", { headers }),
+        ]);
+
+        if (!jadwalRes.ok) throw new Error("Gagal mengambil data jadwal");
+        if (!beritaRes.ok) throw new Error("Gagal mengambil data berita");
+
+        const jadwalData = await jadwalRes.json();
+        const beritaData = await beritaRes.json();
+
+        setData(jadwalData.data || jadwalData);
+        setData1(beritaData.data || beritaData);
+      } catch (error) {
+        console.error("Gagal memuat data:", error);
+      }
+    };
+
+    fetchAllData();
+  }, []);
+
   const handleEventClick = (clickInfo) => {
     const clickedEvent = data.find(
       (item) =>
@@ -301,12 +343,37 @@ export default function Page() {
     setSelectedKegiatan(clickedEvent);
   };
 
+  useEffect(() => {
+    const fetchPrayerTimes = async () => {
+      try {
+        const response = await axios.get(
+          `https://api.aladhan.com/v1/timingsByCity?city=${currentCity}&country=Indonesia&method=11`
+        );
+        setPrayerTimes(response.data.data.timings);
+      } catch (error) {
+        console.error('Error fetching prayer times:', error);
+      }
+    };
+
+    fetchPrayerTimes();
+  }, [currentCity]);
+
+  // Update the currentStep state to accommodate more steps
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Update the useEffect for step animation
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCurrentStep((prevStep) => (prevStep >= 7 ? 1 : prevStep + 1));
+    }, 2000); // Change step every 2 seconds
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="relative min-h-screen bg-gradient-to-b from-green-50 to-white">
       <div className="fixed inset-0 pointer-events-none overflow-hidden">
-        <div 
-          className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t from-white to-transparent"
-        />
+        <div className="absolute bottom-0 left-0 right-0 h-64 bg-gradient-to-t"/> // gradasi putih footer
       </div>
 
       {/* Header & Navigation - Responsive */}
@@ -443,11 +510,42 @@ export default function Page() {
         </AnimatePresence>
       </header>
 
+      {/* Add this right after the header closing tag </header> */}
+      <div className="bg-green-600 py-2 sticky top-[72px] z-40">
+        <Marquee
+          speed={50}
+          gradient={false}
+          className="text-white"
+        >
+          {prayerTimes ? (
+            <div className="flex items-center space-x-8">
+              <span className="flex items-center">
+                <MapPin size={16} className="mr-2" /> {currentCity}
+              </span>
+              <span>Subuh: {prayerTimes.Fajr}</span>
+              <span>•</span>
+              <span>Dzuhur: {prayerTimes.Dhuhr}</span>
+              <span>•</span>
+              <span>Ashar: {prayerTimes.Asr}</span>
+              <span>•</span>
+              <span>Maghrib: {prayerTimes.Maghrib}</span>
+              <span>•</span>
+              <span>Isya: {prayerTimes.Isha}</span>
+              <span className="ml-8">
+                Waktu sholat untuk wilayah {currentCity} dan sekitarnya
+              </span>
+            </div>
+          ) : (
+            <span>Memuat jadwal sholat...</span>
+          )}
+        </Marquee>
+      </div>
+
       {/* Hero Section */}
       <section id="home" className="relative min-h-screen flex items-center justify-center py-24">
         <div 
           className="absolute inset-0 bg-[url('/img/sabilillah.jpg')] bg-center bg-no-repeat bg-cover opacity-10"
-          style={{ transform: `scale(${1 + scrollY * 0.0002})` }}
+          // style={{ transform: `scale(${1 + scrollY * 0.0002})` }}
         />
         <div className="container mx-auto px-4 text-center z-10">
           <motion.div
@@ -579,34 +677,7 @@ export default function Page() {
             </p>
           </div>
           
-          <div className="grid md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl shadow-lg p-6 transform transition hover:scale-105 hover:shadow-xl">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-bold text-green-700">Jadwal Sholat</h3>
-                <div className="bg-green-100 text-green-600 p-2 rounded-lg">
-                  <CalendarIcon size={24} />
-                </div>
-              </div>
-              
-              <div className="space-y-4">
-                {[
-                  { name: "Subuh", time: "04:30" },
-                  { name: "Dzuhur", time: "12:00" },
-                  { name: "Ashar", time: "15:30" },
-                  { name: "Maghrib", time: "18:00" },
-                  { name: "Isya", time: "19:15" }
-                ].map((prayer, index) => (
-                  <div key={index} className="flex justify-between items-center pb-2 border-b border-gray-100">
-                    <div className="flex items-center gap-3">
-                      <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      <span className="font-medium text-gray-700">{prayer.name}</span>
-                    </div>
-                    <span className="text-green-600 font-semibold">{prayer.time}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-            
+          <div className="grid justify-center">
             <div className="bg-white rounded-xl shadow-lg p-6 transform transition hover:scale-105 hover:shadow-xl">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-2xl font-bold text-green-700">
@@ -653,7 +724,7 @@ export default function Page() {
               className="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-md inline-flex items-center gap-2 transition-colors"
             >
               <Calendar size={20} />
-              <span>Lihat Jadwal Kegiatan</span>
+              <span>Lihat Kalender Kegiatan</span>
             </button>
           </div>
         </div>
@@ -724,46 +795,67 @@ export default function Page() {
           
           <div className="mt-16 bg-green-50 rounded-xl p-8 text-center">
             <h3 className="text-2xl font-bold text-green-800 mb-4">Cara Reservasi Fasilitas</h3>
-            <div className="grid grid-cols-1 sm:grid-cols-4 gap-8 mt-8">
-              <div className="flex flex-col items-center">
-                <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">1</span>
-                </div>
-                <h4 className="font-semibold text-green-700 mb-2">Register/Login</h4>
-                <p className="text-gray-600 text-sm">
-                  Register atau login terlebih dahulu
-                </p>
-              </div>
+          
 
-              <div className="flex flex-col items-center">
-                <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">2</span>
+            {/* Step Details */}
+            <div className="grid grid-cols-1 sm:grid-cols-7 gap-8 mt-8">
+              {[
+                {
+                  icon: <User size={24} />,
+                  title: "Login / Register",
+                  desc: "Masuk / Buat ke akun Anda untuk mulai reservasi"
+                },
+                {
+                  icon: <Calendar size={24} />,
+                  title: "Pilih Jenis Acara",
+                  desc: "Pilih jenis kegiatan yang akan dilaksanakan"
+                },
+                {
+                  icon: <Building size={24} />,
+                  title: "Pilih Fasilitas",
+                  desc: "Pilih fasilitas yang dibutuhkan"
+                },
+                {
+                  icon: <Clock size={24} />,
+                  title: "Pilih Tanggal & Sesi",
+                  desc: "Tentukan waktu pelaksanaan"
+                },
+                {
+                  icon: <Mail size={24} />,
+                  title: "Pengajuan",
+                  desc: "Kirim pengajuan reservasi"
+                },
+                {
+                  icon: <CreditCard size={24} />,
+                  title: "Pembayaran",
+                  desc: "Lakukan pembayaran biaya sewa"
+                },
+                {
+                  icon: <CheckCircle size={24} />,
+                  title: "Selesai",
+                  desc: "Reservasi siap digunakan"
+                }
+              ].map((step, index) => (
+                <div 
+                  key={index} 
+                  className="flex flex-col items-center"
+                >
+                  <div 
+                    className={`w-16 h-16 rounded-full flex items-center justify-center transition-all duration-500 ease-in-out
+                      ${currentStep >= index + 1 ? 'bg-green-500 text-white scale-110' : 'bg-white text-gray-400 scale-100'} 
+                      shadow-md mb-4`}
+                  >
+                    {step.icon}
+                  </div>
+                  <h4 className={`font-semibold mb-2 transition-colors duration-100 ease-in-out
+                    ${currentStep === index + 1 ? 'text-green-700' : 'text-gray-600'}`}>
+                    {step.title}
+                  </h4>
+                  <p className="text-gray-600 text-sm">
+                    {step.desc}
+                  </p>
                 </div>
-                <h4 className="font-semibold text-green-700 mb-2">Pilih Fasilitas</h4>
-                <p className="text-gray-600 text-sm">
-                  Tentukan fasilitas yang ingin Anda gunakan sesuai kebutuhan
-                </p>
-              </div>
-              
-              <div className="flex flex-col items-center">
-                <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">3</span>
-                </div>
-                <h4 className="font-semibold text-green-700 mb-2">Isi Formulir</h4>
-                <p className="text-gray-600 text-sm">
-                  Lengkapi formulir reservasi dengan informasi acara Anda
-                </p>
-              </div>
-              
-              <div className="flex flex-col items-center">
-                <div className="bg-white w-16 h-16 rounded-full flex items-center justify-center text-green-600 shadow-md mb-4">
-                  <span className="text-2xl font-bold">4</span>
-                </div>
-                <h4 className="font-semibold text-green-700 mb-2">Konfirmasi</h4>
-                <p className="text-gray-600 text-sm">
-                  Tunggu konfirmasi dari pengurus masjid melalui email atau telepon
-                </p>
-              </div>
+              ))}
             </div>
           </div>
           
@@ -789,55 +881,45 @@ export default function Page() {
           </div>
           
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-8">
-            {[
-              {
-                title: "Pengajian Akbar Menyambut Ramadhan",
-                date: "15 April 2025",
-                image: "/img/pengajian.jpg",
-                excerpt: "Masjid Sabilillah akan menyelenggarakan pengajian akbar untuk menyambut bulan suci Ramadhan dengan mengundang ustadz terkenal."
-              },
-              {
-                title: "Renovasi Tempat Wudhu Selesai",
-                date: "2 April 2025",
-                image: "/img/wudhu.jpg",
-                excerpt: "Alhamdulillah, renovasi tempat wudhu Masjid Sabilillah telah selesai dan dapat digunakan kembali dengan fasilitas yang lebih nyaman."
-              },
-              {
-                title: "Program Santunan Anak Yatim",
-                date: "28 Maret 2025",
-                image: "/img/santunan.jpg",
-                excerpt: "Masjid Sabilillah mengadakan program santunan untuk 50 anak yatim yang akan dilaksanakan pada akhir bulan ini."
-              }
-            ].map((news, index) => (
-              <div 
-                key={index} 
-                className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transform transition hover:-translate-y-2"
-              >
-                <div className="h-48 overflow-hidden">
-                  <img 
-                    src={news.image} 
-                    alt={news.title} 
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                
-                <div className="p-6">
-                  <div className="text-xs text-green-600 font-medium mb-2 flex items-center gap-1">
-                    <CalendarIcon size={12} />
-                    {news.date}
+            {data1.filter((news) => news.status === "Publikasi").length === 0 ? (
+              <div className="text-gray-500 justify">Tidak ada berita yang dipublikasikan.</div>
+            ) : (
+              data1
+                .filter((news) => news.status === "Publikasi")
+                .map((news, index) => (
+                  <div
+                    key={index}
+                    className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-xl transform transition hover:-translate-y-2"
+                  >
+                    <div className="h-48 overflow-hidden">
+                      <img
+                        src={`http://localhost:8000/storage/${news.gambar}`}
+                        alt={news.judul}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                    <div className="p-6">
+                      <div className="text-xs text-green-600 font-medium mb-2 flex items-center gap-1">
+                        <CalendarIcon size={12} />
+                        {news.tanggal}
+                      </div>
+                      <h3 className="text-xl font-bold text-gray-800 mb-3">
+                        {news.judul}
+                      </h3>
+                      <p className="text-gray-600 text-sm mb-4">
+                        {news.konten.length > 100 ? news.konten.slice(0, 100) + "..." : news.konten}
+                      </p>
+                      <button className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1 transition-colors">
+                        Baca Selengkapnya
+                        <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+                          <path d="M3.33334 8H12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                          <path d="M8 3.33337L12.6667 8.00004L8 12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                      </button>
+                    </div>
                   </div>
-                  <h3 className="text-xl font-bold text-gray-800 mb-3">{news.title}</h3>
-                  <p className="text-gray-600 text-sm mb-4">{news.excerpt}</p>
-                  <button className="text-green-600 hover:text-green-700 font-medium flex items-center gap-1 transition-colors">
-                    Baca Selengkapnya
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
-                      <path d="M3.33334 8H12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-                      <path d="M8 3.33337L12.6667 8.00004L8 12.6667" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            ))}
+                ))
+            )}
           </div>
           
           <div className="mt-12 text-center">
@@ -872,7 +954,7 @@ export default function Page() {
 
     {/* Footer */}
     <footer className="bg-white py-12 border-t border-green-100">
-        <div className="container mx-auto px-4">
+          <div className="container mx-auto px-4">
           <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
             <div>
               <div className="flex items-center gap-2 mb-4">
@@ -1023,8 +1105,8 @@ export default function Page() {
     {/* Modal Detail Kegiatan */}
     {selectedKegiatan && (
       <ModalDetailKegiatan 
-        kegiatan={selectedKegiatan} 
-        onClose={() => setSelectedKegiatan(null)} 
+        kegiatan={selectedKegiatan}
+        onClose={() => setSelectedKegiatan(null)}
       />
     )}
     </div>

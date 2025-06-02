@@ -79,6 +79,7 @@ export default function Page() {
     keterangan: "", 
     harga: "",
     status: "",
+    gambar: null,
     touched: {}
   })
   const [isEditing, setIsEditing] = useState(false)
@@ -94,6 +95,7 @@ export default function Page() {
       keterangan: "",
       harga: "",
       status: "",
+      gambar: null,
       touched: {}
     });
     setIsDuplicateName(false);
@@ -249,7 +251,7 @@ export default function Page() {
 
   // Improve error handling in createFacility function
   const createFacility = async (facilityData) => {
-    setIsLoading(true)
+    setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
       
@@ -261,38 +263,31 @@ export default function Page() {
         return;
       }
       
-      // Format data properly for API
-      const formattedData = {
-        nama_fasilitas: facilityData.nama_fasilitas,
-        keterangan: facilityData.keterangan || "",
-        harga: facilityData.harga || "0",
-        status: facilityData.status
-      };
-      
-      console.log("Sending data to create:", formattedData);
+      const formDataToSend = new FormData();
+      formDataToSend.append('nama_fasilitas', facilityData.nama_fasilitas);
+      formDataToSend.append('keterangan', facilityData.keterangan || '');
+      formDataToSend.append('harga', facilityData.harga || '0');
+      formDataToSend.append('status', facilityData.status);
+      if (facilityData.gambar) {
+        formDataToSend.append('gambar', facilityData.gambar);
+      }
       
       const response = await fetch(`${API_BASE_URL}`, {
         method: "POST",
         headers: {
-          "Content-Type": "application/json",
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(formattedData),
+        body: formDataToSend,
       });
       
-      const responseData = await response.json().catch(() => ({}));
-      console.log("API Response:", responseData);
+      const responseData = await response.json();
       
       if (!response.ok) {
-        // Extract error message from response if available
-        const errorMessage = responseData.message || 
-                            responseData.error || 
-                            `Error ${response.status}: ${response.statusText}`;
-        throw new Error(errorMessage);
+        throw new Error(responseData.message || 'Gagal menambahkan fasilitas');
       }
       
-      await fetchFacilities(); // Refresh data
+      await fetchFacilities();
       toast.success("Data fasilitas berhasil ditambahkan");
     } catch (error) {
       console.error("Failed to create facility:", error);
@@ -316,39 +311,32 @@ export default function Page() {
         return;
       }
       
-      // Clean and format the data to match API expectations
-      const formattedData = {
-        nama_fasilitas: facilityData.nama_fasilitas,
-        keterangan: facilityData.keterangan || "",
-        harga: facilityData.harga || "0",
-        status: facilityData.status
-      };
-      
-      console.log("Updating facility with ID:", id);
-      console.log("Sending data:", formattedData);
+      const formDataToSend = new FormData();
+      formDataToSend.append('_method', 'PUT'); // Add this for Laravel to handle PUT request
+      formDataToSend.append('nama_fasilitas', facilityData.nama_fasilitas);
+      formDataToSend.append('keterangan', facilityData.keterangan || '');
+      formDataToSend.append('harga', facilityData.harga || '0');
+      formDataToSend.append('status', facilityData.status);
+      if (facilityData.gambar) {
+        formDataToSend.append('gambar', facilityData.gambar);
+      }
       
       const response = await fetch(`${API_BASE_URL}/${id}`, {
-        method: "PUT",
+        method: "POST", // Keep as POST for FormData
         headers: {
-          "Content-Type": "application/json",
           "Accept": "application/json",
           "Authorization": `Bearer ${token}`,
         },
-        body: JSON.stringify(formattedData),
+        body: formDataToSend,
       });
       
-      const responseData = await response.json().catch(() => ({}));
-      console.log("API Response:", responseData);
+      const responseData = await response.json();
       
       if (!response.ok) {
-        // Extract error message from response if available
-        const errorMessage = responseData.message || 
-                            responseData.error || 
-                            `Error ${response.status}: ${response.statusText}`;
-        throw new Error(errorMessage);
+        throw new Error(responseData.message || 'Gagal memperbarui fasilitas');
       }
       
-      await fetchFacilities(); // Refresh data
+      await fetchFacilities();
       toast.success("Data fasilitas berhasil diperbarui");
     } catch (error) {
       console.error(`Failed to update facility ID ${id}:`, error);
@@ -389,6 +377,30 @@ export default function Page() {
     }
   }
 
+  // Handle file input change
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      // Validate file type and size
+      const validTypes = ['image/jpeg', 'image/png', 'image/jpg', 'image/svg+xml'];
+      const maxSize = 2 * 1024 * 1024; // 2MB
+
+      if (!validTypes.includes(file.type)) {
+        toast.error('Format file harus jpeg, png, jpg, atau svg');
+        e.target.value = '';
+        return;
+      }
+
+      if (file.size > maxSize) {
+        toast.error('Ukuran file maksimal 2MB');
+        e.target.value = '';
+        return;
+      }
+
+      setFormData(prev => ({ ...prev, gambar: file }));
+    }
+  };
+
   const handleInputChange = (e) => {
     const { name, value } = e.target;
     
@@ -414,7 +426,6 @@ export default function Page() {
   }
 
   const handleEdit = (item) => {
-    // Ensure we're getting the actual values for editing
     console.log("Editing item:", item);
     
     setFormData({
@@ -423,6 +434,7 @@ export default function Page() {
       keterangan: item.keterangan || "",
       harga: item.harga || "",
       status: item.status || "",
+      gambar: null, // Reset gambar when editing
       touched: {}
     });
     
@@ -517,7 +529,7 @@ export default function Page() {
     if (status === 'tersedia') {
       return 'bg-green-100 text-green-800 border-green-200';
     } else if (status === 'tidaktersedia') {
-      return 'bg-gray-100 text-gray-800 border-gray-200';
+      return 'bg-red-100 text-red-800 border-red-200';
     } else {
       return 'bg-blue-100 text-blue-800 border-blue-200';
     }
@@ -591,11 +603,11 @@ export default function Page() {
                 <div className="rounded-md border shadow-sm overflow-hidden">
                   {/* Table Header */}
                   <div className="bg-gray-50 border-b grid grid-cols-11 text-xs font-medium text-gray-500 uppercase">
-                    {/* <div className="px-4 py-3 col-span-1 text-center">ID</div> */}
-                    <div className="px-4 py-3 col-span-3">Nama Fasilitas</div>
-                    <div className="px-4 py-3 col-span-3">Keterangan</div>
-                    <div className="px-4 py-3 col-span-2">Harga</div>
-                    <div className="px-4 py-3 col-span-2">Status</div>
+                    <div className="px-4 py-3 col-span-1 text-left">Gambar</div>
+                    <div className="px-4 py-3 col-span-2 text-left">Nama Fasilitas</div>
+                    <div className="px-4 py-3 col-span-3 text-left">Keterangan</div>
+                    <div className="px-4 py-3 col-span-2 text-left">Harga</div>
+                    <div className="px-4 py-3 col-span-2 text-left">Status</div>
                     <div className="px-4 py-3 col-span-1 text-right">Aksi</div>
                   </div>
 
@@ -612,21 +624,33 @@ export default function Page() {
                   {/* Table Content */}
                   {!isLoading && currentItems.length > 0 ? (
                     currentItems.map((item) => (
-                      <div
-                        key={item.id}
-                        className="grid grid-cols-11 border-b text-sm hover:bg-gray-50 transition-colors"
-                      >
-                        {/* <div className="px-4 py-3 col-span-1 text-center font-medium text-gray-700">{item.id}</div> */}
-                        <div className="px-4 py-3 col-span-3 font-medium">{item.nama_fasilitas}</div>
-                        <div className="px-4 py-3 col-span-3 text-gray-600 truncate">{item.keterangan}</div>
-                        <div className="px-4 py-3 col-span-2 font-medium text-gray-700">{formatPrice(item.harga)}</div>
+                      <div key={item.id} className="grid grid-cols-11 border-b text-sm hover:bg-gray-50 transition-colors items-center">
+                        <div className="px-4 py-3 col-span-1">
+                          {item.gambar ? (
+                            <img
+                              src={`http://127.0.0.1:8000/storage/${item.gambar}`}
+                              alt="Fasilitas"
+                              className="h-16 w-16 object-cover rounded-md"
+                              onError={(e) => {
+                                e.target.src = "https://placehold.co/64x64?text=No+Image";
+                              }}
+                            />
+                          ) : (
+                            <div className="h-16 w-16 bg-gray-100 rounded-md flex items-center justify-center">
+                              <span className="text-gray-400 text-xs text-center">No Image</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="px-4 py-3 col-span-2 font-medium text-left">{item.nama_fasilitas}</div>
+                        <div className="px-4 py-3 col-span-3 text-gray-600 text-left truncate">{item.keterangan}</div>
+                        <div className="px-4 py-3 col-span-2 font-medium text-gray-700 text-left">{formatPrice(item.harga)}</div>
                         <div className="px-4 py-3 col-span-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClass(item.status)}`}>
                             {formatStatus(item.status)}
                           </span>
                         </div>
-                        <div className="px-4 py-3 col-span-1 text-right">
-                          <div className="flex justify-end gap-1">
+                        <div className="px-4 py-3 col-span-1 flex justify-end">
+                          <div className="flex gap-1">
                             <Button
                               variant="outline"
                               size="sm"
@@ -738,6 +762,27 @@ export default function Page() {
                           {formatStatus(detailItem.status)}
                         </span>
                       </p>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <p className="font-medium text-gray-500">Gambar:</p>
+                      <div className="col-span-2">
+                        {detailItem.gambar ? (
+                          <img
+                            src={`http://127.0.0.1:8000/storage/${detailItem.gambar}`}
+                            alt="Fasilitas"
+                            className="max-w-[200px] rounded-md"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              const placeholder = document.createElement('p');
+                              placeholder.className = 'text-gray-500';
+                              placeholder.textContent = 'Gambar tidak dapat dimuat';
+                              e.target.parentNode.appendChild(placeholder);
+                            }}
+                          />
+                        ) : (
+                          <p className="text-gray-500">Tidak ada gambar</p>
+                        )}
+                      </div>
                     </div>
                   </div>
                 )}
@@ -866,6 +911,34 @@ export default function Page() {
                       </Select>
                       {formData.touched?.status && !formData.status && (
                         <p className="text-xs text-red-500 mt-1">Status harus dipilih.</p>
+                      )}
+                    </div>
+                    <div className="grid gap-2">
+                      <Label htmlFor="gambar">
+                        Gambar Fasilitas
+                      </Label>
+                      <Input
+                        id="gambar"
+                        name="gambar"
+                        type="file"
+                        accept="image/jpeg,image/png,image/jpg,image/svg+xml"
+                        onChange={handleFileChange}
+                        disabled={isLoading}
+                      />
+                      <p className="text-xs text-gray-500">
+                        Format: JPEG, PNG, JPG, SVG (Max. 2MB)
+                      </p>
+                      {formData.gambar && (
+                        <div className="mt-2">
+                          <p className="text-sm text-gray-500">File terpilih: {formData.gambar.name}</p>
+                          {typeof formData.gambar === 'object' && (
+                            <img
+                              src={URL.createObjectURL(formData.gambar)}
+                              alt="Preview"
+                              className="mt-2 h-32 w-32 object-cover rounded-md"
+                            />
+                          )}
+                        </div>
                       )}
                     </div>
                   </div>
