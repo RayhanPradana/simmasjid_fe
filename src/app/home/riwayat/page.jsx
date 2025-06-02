@@ -199,7 +199,7 @@ export default function ReservasiPage() {
   const handlePayment = (reservationId, type) => {
     localStorage.setItem("pendingPaymentReservationId", reservationId);
     localStorage.setItem("paymentType", type); // 'dp' or 'remaining'
-    router.push('/landing-page/pembayaran');
+    router.push('/home/pembayaran');
   };
 
   const getStatusBadgeVariant = (status) => {
