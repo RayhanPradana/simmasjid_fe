@@ -55,6 +55,7 @@ const Profile = () => {
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -91,7 +92,7 @@ const Profile = () => {
       formData.append("phone", phone);
       formData.append("address", address);
 
-      const response = await fetch("http://127.0.0.1:8000/api/users-profile", {
+      const response = await fetch(`${apiUrl}/api/users-profile`, {
         method: "POST",
         headers: {
           Authorization: `Bearer ${localStorage.getItem("token")}`,
@@ -130,7 +131,7 @@ const Profile = () => {
 
   const handleChangePassword = async () => {
     try {
-      const response = await fetch("http://127.0.0.1:8000/api/users-update", {
+      const response = await fetch(`${apiUrl}/api/users-update`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -176,7 +177,7 @@ const Profile = () => {
       formData.append("image", file);
 
       try {
-        const response = await fetch("http://127.0.0.1:8000/api/users-photo", {
+        const response = await fetch(`${apiUrl}/api/users-photo`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${localStorage.getItem("token")}`,

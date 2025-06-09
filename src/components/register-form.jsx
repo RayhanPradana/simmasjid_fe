@@ -16,7 +16,7 @@ export function RegisterForm({ className, ...props }) {
 
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
   const [error, setError] = useState({}); 
 
   const [form, setForm] = useState({
@@ -57,11 +57,11 @@ export function RegisterForm({ className, ...props }) {
     }
 
     try {
-      await fetch("http://localhost:8000/sanctum/csrf-cookie", {
+      await fetch(`${apiUrl}/sanctum/csrf-cookie`, {
         credentials: "include",
       });
 
-      const res = await fetch("http://localhost:8000/api/register", {
+      const res = await fetch(`${apiUrl}/api/register`, {
         method: "POST",
         credentials: "include",
         body: formData,
