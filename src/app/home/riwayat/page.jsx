@@ -36,10 +36,12 @@ import {
   XCircle,
   AlertCircle,
   DollarSign,
-  Loader2
+  Loader2,
+  CircleEllipsis,
 } from 'lucide-react';
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+// const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export default function ReservasiPage() {
   const router = useRouter();
@@ -49,6 +51,8 @@ export default function ReservasiPage() {
   const [selectedReservation, setSelectedReservation] = useState(null);
   const [isDetailOpen, setIsDetailOpen] = useState(false);
   const [isLoadingDetail, setIsLoadingDetail] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [reservationToCancel, setReservationToCancel] = useState(null);
 
   // Get current user info
   const getCurrentUser = () => {
@@ -86,7 +90,7 @@ export default function ReservasiPage() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${API_BASE_URL}/reservasiuser`, {
+      const response = await fetch(`${apiUrl}/api/reservasiuser`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -134,7 +138,7 @@ export default function ReservasiPage() {
       setIsLoadingDetail(true);
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${API_BASE_URL}/reservasiuser/${reservationId}`, {
+      const response = await fetch(`${apiUrl}/api/reservasiuser/${reservationId}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -249,14 +253,118 @@ export default function ReservasiPage() {
     }
   };
 
-  // Update getActionButton function
+  // Update cancelReservation function
+  const cancelReservation = async (reservationId) => {
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${apiUrl}/api/reservasiuser/${reservationId}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/login");
+          return;
+        }
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      await fetchReservations(); // Refresh the reservations list
+      toast.success("Reservasi berhasil dibatalkan");
+      setIsDetailOpen(false);
+    } catch (error) {
+      console.error("Error canceling reservation:", error);
+      toast.error("Gagal membatalkan reservasi");
+    }
+  };
+
+  // Add handleCancelClick and handleConfirmCancel functions
+  const handleCancelClick = (reservation) => {
+    setReservationToCancel(reservation);
+    setIsCancelDialogOpen(true);
+  };
+
+  const handleConfirmCancel = async () => {
+    if (!reservationToCancel) return;
+    
+    try {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${apiUrl}/api/reservasiuser/${reservationToCancel.id}/cancel`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+          "Accept": "application/json",
+          "Authorization": `Bearer ${token}`,
+        }
+      });
+
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/login");
+          return;
+        }
+        throw new Error(`Error: ${response.status}`);
+      }
+
+      await fetchReservations();
+      toast.success("Reservasi berhasil dibatalkan");
+      setIsDetailOpen(false);
+    } catch (error) {
+      console.error("Error canceling reservation:", error);
+      toast.error("Gagal membatalkan reservasi");
+    } finally {
+      setIsCancelDialogOpen(false);
+      setReservationToCancel(null);
+    }
+  };
+
+  // Replace the existing getActionButton function
   const getActionButton = (reservation) => {
     const status = reservation.status_reservasi;
     
+    const ButtonContainer = ({ children }) => (
+      <div className="flex flex-col space-y-2 min-w-[200px]">
+        {children}
+      </div>
+    );
+
+    const StatusDisplay = ({ color, icon: Icon, text }) => (
+      <div className={`text-sm ${color} italic flex items-center justify-center w-full`}>
+        <Icon className="w-4 h-4 mr-2" />
+        {text}
+      </div>
+    );
+    
     switch (status) {
+      case 'pending':
+        return (
+          <ButtonContainer>
+            <Button
+              onClick={() => handleCancelClick(reservation)}
+              variant="destructive"
+              size="sm"
+              className="w-full"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Batalkan Reservasi
+            </Button>
+          </ButtonContainer>
+        );
+      
       case 'disetujui':
         return (
-          <div className="flex flex-col space-y-2">
+          <ButtonContainer>
             <Button
               onClick={() => handlePayment(reservation.id, 'dp')}
               variant="default"
@@ -275,68 +383,106 @@ export default function ReservasiPage() {
               <CreditCard className="w-4 h-4 mr-2" />
               Bayar Lunas (100%)
             </Button>
-          </div>
+            <Button
+              onClick={() => handleCancelClick(reservation)}
+              variant="destructive"
+              size="sm"
+              className="w-full"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Batalkan Reservasi
+            </Button>
+          </ButtonContainer>
         );
       
       case 'menunggu lunas':
         return (
-          <Button
-            onClick={() => handlePayment(reservation.id, 'pelunasan')}
-            variant="default"
-            size="sm"
-            className="bg-orange-600 hover:bg-orange-700 text-white"
-          >
-            <CreditCard className="w-4 h-4 mr-2" />
-            Bayar Pelunasan (70%)
-          </Button>
+          <ButtonContainer>
+            <Button
+              onClick={() => handlePayment(reservation.id, 'pelunasan')}
+              variant="default"
+              size="sm"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
+            >
+              <CreditCard className="w-4 h-4 mr-2" />
+              Bayar Pelunasan (70%)
+            </Button>
+            <Button
+              onClick={() => handleCancelClick(reservation)}
+              variant="destructive"
+              size="sm"
+              className="w-full"
+            >
+              <XCircle className="w-4 h-4 mr-2" />
+              Batalkan Reservasi
+            </Button>
+          </ButtonContainer>
         );
 
       case 'ditolak':
         return (
-          <div className="text-sm text-red-600 italic flex items-center">
-            <XCircle className="w-4 h-4 mr-2" />
-            Reservasi ditolak
-          </div>
+          <ButtonContainer>
+            <StatusDisplay 
+              color="text-red-600" 
+              icon={XCircle} 
+              text="Reservasi ditolak" 
+            />
+          </ButtonContainer>
         );
 
       case 'siap digunakan':
         return (
-          <div className="text-sm text-green-600 flex items-center">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Siap digunakan
-          </div>
+          <ButtonContainer>
+            <StatusDisplay 
+              color="text-green-600" 
+              icon={CheckCircle} 
+              text="Siap digunakan" 
+            />
+          </ButtonContainer>
         );
 
       case 'sedang berlangsung':
         return (
-          <div className="text-sm text-blue-600 flex items-center">
-            <Clock className="w-4 h-4 mr-2" />
-            Sedang berlangsung
-          </div>
+          <ButtonContainer>
+            <StatusDisplay 
+              color="text-blue-600" 
+              icon={Clock} 
+              text="Sedang berlangsung" 
+            />
+          </ButtonContainer>
         );
 
       case 'selesai':
         return (
-          <div className="text-sm text-gray-600 flex items-center">
-            <CheckCircle className="w-4 h-4 mr-2" />
-            Selesai
-          </div>
+          <ButtonContainer>
+            <StatusDisplay 
+              color="text-gray-600" 
+              icon={CheckCircle} 
+              text="Selesai" 
+            />
+          </ButtonContainer>
         );
 
       case 'dibatalkan':
         return (
-          <div className="text-sm text-red-600 italic flex items-center">
-            <XCircle className="w-4 h-4 mr-2" />
-            Dibatalkan
-          </div>
+          <ButtonContainer>
+            <StatusDisplay 
+              color="text-red-600" 
+              icon={XCircle} 
+              text="Dibatalkan" 
+            />
+          </ButtonContainer>
         );
 
       default:
         return (
-          <div className="text-sm text-gray-600 flex items-center">
-            <AlertCircle className="w-4 h-4 mr-2" />
-            Menunggu proses
-          </div>
+          <ButtonContainer>
+            <StatusDisplay 
+              color="text-gray-600" 
+              icon={AlertCircle} 
+              text="Menunggu proses" 
+            />
+          </ButtonContainer>
         );
     }
   };
@@ -506,7 +652,12 @@ export default function ReservasiPage() {
                     {selectedReservation.acara.deskripsi && (
                       <div>
                         <p className="text-sm font-medium text-gray-600">Deskripsi</p>
-                        <p className="text-gray-800">{selectedReservation.acara.deskripsi}</p>
+                        <div 
+                          className="text-gray-800 prose prose-sm max-w-none"
+                          dangerouslySetInnerHTML={{ 
+                            __html: formatDescription(selectedReservation.acara.deskripsi) 
+                          }}
+                        />
                       </div>
                     )}
                     
@@ -712,12 +863,12 @@ export default function ReservasiPage() {
               <CardContent className="p-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-medium text-gray-600">Menunggu</p>
+                    <p className="text-sm font-medium text-gray-600">Sedang Berlangsung</p>
                     <p className="text-2xl font-bold text-yellow-600">
-                      {reservations.filter(r => ['pending', 'diajukan'].includes(r.status_reservasi)).length}
+                      {reservations.filter(r => ['sedang berlangsung'].includes(r.status_reservasi)).length}
                     </p>
                   </div>
-                  <AlertCircle className="w-8 h-8 text-yellow-600" />
+                  <CircleEllipsis className="w-8 h-8 text-yellow-600" />
                 </div>
               </CardContent>
             </Card>
@@ -775,7 +926,6 @@ export default function ReservasiPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead className="w-[100px]">ID</TableHead>
                         <TableHead>Tanggal</TableHead>
                         <TableHead>Acara</TableHead>
                         <TableHead>Fasilitas</TableHead>
@@ -787,9 +937,6 @@ export default function ReservasiPage() {
                     <TableBody>
                       {reservations.map((reservation) => (
                         <TableRow key={reservation.id} className="hover:bg-gray-50">
-                          <TableCell className="font-mono">
-                            #{reservation.id}
-                          </TableCell>
                           
                           <TableCell>
                             <div className="flex items-center space-x-2">
@@ -859,6 +1006,78 @@ export default function ReservasiPage() {
 
       {/* Detail Modal */}
       <DetailModal />
+
+      {/* Cancel Confirmation Dialog */}
+      <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <XCircle className="h-5 w-5 text-destructive" />
+              Konfirmasi Pembatalan
+            </DialogTitle>
+            <DialogDescription asChild>
+              <div className="space-y-4">
+                <span className="block text-sm text-muted-foreground">
+                  Anda akan membatalkan reservasi untuk:
+                </span>
+                <div className="bg-muted p-4 rounded-lg space-y-3">
+                  <div className="flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    <span className="font-medium">
+                      {reservationToCancel?.acara?.nama_acara || 'Tidak ada nama acara'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <CalendarDays className="h-4 w-4" />
+                    <span>
+                      {reservationToCancel?.tgl_reservasi ? 
+                        formatDate(reservationToCancel.tgl_reservasi) : '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <MapPin className="h-4 w-4" />
+                    <span>
+                      {reservationToCancel?.fasilitas?.nama_fasilitas || 'Tidak ada fasilitas'}
+                    </span>
+                  </div>
+                </div>
+                <span className="block text-destructive font-medium">
+                  Tindakan ini tidak dapat dibatalkan. Apakah Anda yakin ingin melanjutkan?
+                </span>
+              </div>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-3 pt-4">
+            <Button
+              variant="outline"
+              onClick={() => setIsCancelDialogOpen(false)}
+            >
+              Tidak, Kembali
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleConfirmCancel}
+              className="gap-2"
+            >
+              <XCircle className="h-4 w-4" />
+              Ya, Batalkan Reservasi
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
+
+// Add this helper function near other utility functions
+const formatDescription = (text) => {
+  if (!text) return '';
+  // Handle bold text (between ** or __)
+  text = text.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+  // Handle bullet points
+  text = text.replace(/^\s*[-*•]\s+(.+)$/gm, '<li>$1</li>');
+  text = text.replace(/(<li>.*<\/li>)/gs, '<ul class="list-disc pl-4">$1</ul>');
+  // Handle line breaks
+  // text = text.replace(/\n/g, '<br/>');
+  return text;
+};

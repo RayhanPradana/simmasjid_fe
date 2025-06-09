@@ -77,7 +77,9 @@ import { Badge } from "@/components/ui/badge"
 import toast from "react-hot-toast"
 
 
-const API_BASE_URL = "http://127.0.0.1:8000/api/reservasi"
+// const API_BASE_URL = "http://127.0.0.1:8000/api/reservasi"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
 
 export default function Page() {
   const [data, setData] = useState([])
@@ -137,7 +139,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token")
 
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/reservasi`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -187,7 +189,7 @@ export default function Page() {
       
       // Fetch acara data
       try {
-        const acaraResponse = await fetch("http://127.0.0.1:8000/api/acara", {
+        const acaraResponse = await fetch(`${apiUrl}/api/acara`, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -205,7 +207,7 @@ export default function Page() {
       
       // Fetch fasilitas data
       try {
-        const fasilitasResponse = await fetch("http://127.0.0.1:8000/api/fasilitas", {
+        const fasilitasResponse = await fetch(`${apiUrl}/api/fasilitas`, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -223,7 +225,7 @@ export default function Page() {
       
       // Fetch sesi data
       try {
-        const sesiResponse = await fetch("http://127.0.0.1:8000/api/sesi", {
+        const sesiResponse = await fetch(`${apiUrl}/api/sesi`, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -242,7 +244,7 @@ export default function Page() {
       // Fetch users for admin
       if (user && user.role === 'admin') {
         try {
-          const usersResponse = await fetch("http://127.0.0.1:8000/api/users", {
+          const usersResponse = await fetch(`${apiUrl}/api/users`, {
             headers: {
               "Content-Type": "application/json",
               "Accept": "application/json",
@@ -271,7 +273,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token")
       
-      const response = await fetch(`${API_BASE_URL}/confirm/${selectedItem.id}`, {
+      const response = await fetch(`${apiUrl}/api/reservasi/confirm/${selectedItem.id}`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -338,7 +340,7 @@ export default function Page() {
         submitData.user_id = parseInt(formData.user_id)
       }
       
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/reservasi`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -385,7 +387,7 @@ export default function Page() {
         submitData.status_reservasi = formData.status_reservasi
       }
       
-      const response = await fetch(`${API_BASE_URL}/${formData.id}`, {
+      const response = await fetch(`${apiUrl}/api/reservasi/${formData.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -420,7 +422,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token")
       
-      const response = await fetch(`${API_BASE_URL}/${selectedItem.id}`, {
+      const response = await fetch(`${apiUrl}/api/reservasi/${selectedItem.id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -454,7 +456,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token")
       
-      const response = await fetch(`${API_BASE_URL}/update-status-otomatis`, {
+      const response = await fetch(`${apiUrl}/api/reservasi/update-status-otomatis`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1078,7 +1080,7 @@ export default function Page() {
                                     </Button>
                                   )}
                                   
-                                  {canDeleteReservation(item) && (
+                                  {/* {canDeleteReservation(item) && (
                                     <Button
                                       variant="ghost"
                                       size="sm"
@@ -1087,7 +1089,7 @@ export default function Page() {
                                     >
                                       <Trash2 className="h-4 w-4" />
                                     </Button>
-                                  )}
+                                  )} */}
                                 </div>
                               </td>
                             </tr>

@@ -1,10 +1,11 @@
-'use client';
-import { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
-import { toast } from 'react-hot-toast';
-import AppSidebarUser from '@/components/app-sidebar-user';
+"use client";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { toast } from "react-hot-toast";
+import AppSidebarUser from "@/components/app-sidebar-user";
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+// const API_BASE_URL = "http://127.0.0.1:8000/api";
+const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
 export default function PembayaranPage() {
   const router = useRouter();
@@ -13,20 +14,20 @@ export default function PembayaranPage() {
   const [reservationDetails, setReservationDetails] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentData, setPaymentData] = useState({
-    reservasi_fasilitas_id: '',
-    jenis: 'dp',
-    metode_pembayaran: 'transfer',
+    reservasi_fasilitas_id: "",
+    jenis: "dp",
+    metode_pembayaran: "transfer",
     jumlah_pembayaran: 0,
-    bukti_transfer: null
+    bukti_transfer: null,
   });
   const [previewImage, setPreviewImage] = useState(null);
   const [priceDetails, setPriceDetails] = useState({
     totalPrice: 0,
     dpAmount: 0,
-    remainingAmount: 0
+    remainingAmount: 0,
   });
   const [paymentType, setPaymentType] = useState(null);
-  
+
   // New state for payment history
   const [paymentHistory, setPaymentHistory] = useState([]);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
@@ -55,7 +56,7 @@ export default function PembayaranPage() {
       if (id) {
         console.log("Found reservation ID:", id);
         setReservationId(id);
-        setPaymentData(prev => ({ ...prev, reservasi_fasilitas_id: id }));
+        setPaymentData((prev) => ({ ...prev, reservasi_fasilitas_id: id }));
         return id;
       }
     } catch (error) {
@@ -69,12 +70,12 @@ export default function PembayaranPage() {
     setIsLoadingHistory(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}/pembayaranuser`, {
+      const response = await fetch(`${apiUrl}/api/pembayaranuser`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -91,7 +92,7 @@ export default function PembayaranPage() {
 
       const result = await response.json();
       console.log("Payment history:", result);
-      
+
       if (result.data) {
         setPaymentHistory(result.data);
         setTotalPages(Math.ceil(result.total / itemsPerPage));
@@ -110,64 +111,64 @@ export default function PembayaranPage() {
   // Fetch reservation details
   const fetchReservationDetails = async (id) => {
     if (!id) return null;
-    
+
     try {
-        const token = localStorage.getItem("token");
-        const response = await fetch(`${API_BASE_URL}/reservasiuser/${id}`, {
+      const token = localStorage.getItem("token");
+      const response = await fetch(`${apiUrl}/api/reservasiuser/${id}`, {
         method: "GET",
         headers: {
-            "Content-Type": "application/json",
-            "Accept": "application/json",
-            "Authorization": `Bearer ${token}`,
+          "Content-Type": "application/json",
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        });
+      });
 
-        if (!response.ok) {
+      if (!response.ok) {
         if (response.status === 401 || response.status === 403) {
-            toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
-            localStorage.removeItem("token");
-            localStorage.removeItem("user");
-            router.push("/login");
-            return null;
+          toast.error("Sesi login Anda telah berakhir. Silakan login kembali.");
+          localStorage.removeItem("token");
+          localStorage.removeItem("user");
+          router.push("/login");
+          return null;
         }
         toast.error(`Gagal memuat data: ${response.status}`);
         return null;
-        }
+      }
 
-        const result = await response.json();
-        console.log("Reservation details:", result);
+      const result = await response.json();
+      console.log("Reservation details:", result);
 
-        // Get price from reservation table instead of facility
-        if (result && result.harga) {
+      // Get price from reservation table instead of facility
+      if (result && result.harga) {
         const totalPrice = result.harga;
         const dpAmount = Math.ceil(totalPrice * 0.3); // 30% DP
         const remainingAmount = totalPrice - dpAmount;
 
         setPriceDetails({
-            totalPrice,
-            dpAmount,
-            remainingAmount
+          totalPrice,
+          dpAmount,
+          remainingAmount,
         });
-        } else if (result && result.fasilitas && result.fasilitas.harga) {
+      } else if (result && result.fasilitas && result.fasilitas.harga) {
         // Fallback to facility price if reservation price doesn't exist
         const totalPrice = result.fasilitas.harga;
         const dpAmount = Math.ceil(totalPrice * 0.3); // 30% DP
         const remainingAmount = totalPrice - dpAmount;
 
         setPriceDetails({
-            totalPrice,
-            dpAmount,
-            remainingAmount
+          totalPrice,
+          dpAmount,
+          remainingAmount,
         });
-        } else {
+      } else {
         toast.error("Informasi harga tidak ditemukan");
-        }
+      }
 
-        return result;
+      return result;
     } catch (error) {
-        console.error("Failed to fetch reservation details:", error);
-        toast.error("Gagal memuat detail reservasi");
-        return null;
+      console.error("Failed to fetch reservation details:", error);
+      toast.error("Gagal memuat detail reservasi");
+      return null;
     }
   };
 
@@ -176,7 +177,7 @@ export default function PembayaranPage() {
     const file = e.target.files[0];
     if (file) {
       setPaymentData({ ...paymentData, bukti_transfer: file });
-      
+
       // Create preview URL
       const reader = new FileReader();
       reader.onloadend = () => {
@@ -189,84 +190,84 @@ export default function PembayaranPage() {
   // Handle form input changes
   const handleInputChange = (e) => {
     const { name, value } = e.target;
-    setPaymentData(prev => ({ ...prev, [name]: value }));
+    setPaymentData((prev) => ({ ...prev, [name]: value }));
   };
 
   // Format currency
   const formatCurrency = (amount) => {
-    return new Intl.NumberFormat('id-ID', {
-      style: 'currency',
-      currency: 'IDR',
+    return new Intl.NumberFormat("id-ID", {
+      style: "currency",
+      currency: "IDR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(amount);
   };
 
   // Format date
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('id-ID', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
     });
   };
 
   // Get status badge color
   const getStatusBadge = (status) => {
     switch (status?.toLowerCase()) {
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'approved':
-      case 'confirmed':
-      case 'lunas':
-        return 'bg-green-100 text-green-800';
-      case 'rejected':
-      case 'dibatalkan':
-        return 'bg-red-100 text-red-800';
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "approved":
+      case "confirmed":
+      case "lunas":
+        return "bg-green-100 text-green-800";
+      case "rejected":
+      case "dibatalkan":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   // Get payment type badge color
   const getPaymentTypeBadge = (type) => {
     switch (type?.toLowerCase()) {
-      case 'dp':
-        return 'bg-blue-100 text-blue-800';
-      case 'lunas':
-      case 'pelunasan':
-        return 'bg-green-100 text-green-800';
+      case "dp":
+        return "bg-blue-100 text-blue-800";
+      case "lunas":
+      case "pelunasan":
+        return "bg-green-100 text-green-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   const getStatusTypeBadge = (type) => {
     switch (type?.toLowerCase()) {
-      case 'dp':
-        return 'bg-blue-100 text-blue-800';
-      case 'lunas':
-      case 'pelunasan':
-      case 'paid':
-        return 'bg-green-100 text-green-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      case 'belum lunas':
-      case 'unpaid':
-        return 'bg-red-100 text-red-800';
+      case "dp":
+        return "bg-blue-100 text-blue-800";
+      case "lunas":
+      case "pelunasan":
+      case "paid":
+        return "bg-green-100 text-green-800";
+      case "pending":
+        return "bg-yellow-100 text-yellow-800";
+      case "belum lunas":
+      case "unpaid":
+        return "bg-red-100 text-red-800";
       default:
-        return 'bg-gray-100 text-gray-800';
+        return "bg-gray-100 text-gray-800";
     }
   };
 
   // Calculate payment amount based on type
   const calculatePaymentAmount = (totalPrice, paymentType) => {
-    switch(paymentType) {
-      case 'dp':
+    switch (paymentType) {
+      case "dp":
         return totalPrice * 0.3; // 30% for DP
-      case 'pelunasan':
+      case "pelunasan":
         return totalPrice * 0.7; // 70% for remaining payment
-      case 'full':
+      case "full":
         return totalPrice; // 100% for full payment
       default:
         return 0;
@@ -275,25 +276,32 @@ export default function PembayaranPage() {
 
   // Get payment options
   const getPaymentOptions = () => {
-    switch(paymentType) {
-      case 'dp':
+    switch (paymentType) {
+      case "dp":
         return (
           <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-            <span className="text-gray-700">DP (30% - {formatCurrency(priceDetails.dpAmount)})</span>
+            <span className="text-gray-700">
+              DP (30% - {formatCurrency(priceDetails.dpAmount)})
+            </span>
             <input type="hidden" name="jenis" value="dp" />
           </div>
         );
-      case 'pelunasan':
+      case "pelunasan":
         return (
           <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-            <span className="text-gray-700">Pelunasan (70% - {formatCurrency(priceDetails.remainingAmount)})</span>
+            <span className="text-gray-700">
+              Pelunasan (70% - {formatCurrency(priceDetails.remainingAmount)})
+            </span>
             <input type="hidden" name="jenis" value="lunas" />
           </div>
         );
-      case 'full':
+      case "full":
         return (
           <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-            <span className="text-gray-700">Pembayaran Lunas (100% - {formatCurrency(priceDetails.totalPrice)})</span>
+            <span className="text-gray-700">
+              Pembayaran Lunas (100% - {formatCurrency(priceDetails.totalPrice)}
+              )
+            </span>
             <input type="hidden" name="jenis" value="lunas" />
           </div>
         );
@@ -305,77 +313,82 @@ export default function PembayaranPage() {
   // Handle payment submission
   const handleSubmitPayment = async (e) => {
     e.preventDefault();
-    
+
     try {
       const token = localStorage.getItem("token");
       const formData = new FormData();
-      
+
       // Calculate payment amount based on type
-      const paymentAmount = paymentType === 'dp' 
-        ? priceDetails.dpAmount
-        : paymentType === 'pelunasan'
-        ? priceDetails.remainingAmount
-        : priceDetails.totalPrice;
+      const paymentAmount =
+        paymentType === "dp"
+          ? priceDetails.dpAmount
+          : paymentType === "pelunasan"
+          ? priceDetails.remainingAmount
+          : priceDetails.totalPrice;
 
       // Map payment types to backend expected values
       let paymentTypeBackend;
-      switch(paymentType) {
-        case 'dp':
-          paymentTypeBackend = 'dp';
+      switch (paymentType) {
+        case "dp":
+          paymentTypeBackend = "dp";
           break;
-        case 'pelunasan':
-          paymentTypeBackend = 'pelunasan';
+        case "pelunasan":
+          paymentTypeBackend = "pelunasan";
           break;
-        case 'full':
-          paymentTypeBackend = 'lunas';
+        case "full":
+          paymentTypeBackend = "lunas";
           break;
         default:
-          paymentTypeBackend = 'dp';
+          paymentTypeBackend = "dp";
       }
 
       // Append form data with correct payment type
-      formData.append('reservasi_fasilitas_id', paymentData.reservasi_fasilitas_id);
-      formData.append('jenis', paymentTypeBackend);
-      formData.append('jumlah_pembayaran', paymentAmount);
-      formData.append('metode_pembayaran', paymentData.metode_pembayaran);
-      
+      formData.append(
+        "reservasi_fasilitas_id",
+        paymentData.reservasi_fasilitas_id
+      );
+      formData.append("jenis", paymentTypeBackend);
+      formData.append("jumlah_pembayaran", paymentAmount);
+      formData.append("metode_pembayaran", paymentData.metode_pembayaran);
+
       if (paymentData.bukti_transfer) {
-        formData.append('bukti_transfer', paymentData.bukti_transfer);
+        formData.append("bukti_transfer", paymentData.bukti_transfer);
       }
 
       // Debug log to check data being sent
-      console.log('Sending payment data:', {
+      console.log("Sending payment data:", {
         reservasi_id: paymentData.reservasi_fasilitas_id,
         jenis: paymentTypeBackend,
         jumlah: paymentAmount,
-        metode: paymentData.metode_pembayaran
+        metode: paymentData.metode_pembayaran,
       });
 
-      const response = await fetch(`${API_BASE_URL}/pembayaranuser`, {
+      const response = await fetch(`${apiUrl}/api/pembayaranuser`, {
         method: "POST",
         headers: {
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
+          Accept: "application/json",
+          Authorization: `Bearer ${token}`,
         },
-        body: formData
+        body: formData,
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        throw new Error(result.message || `HTTP error! status: ${response.status}`);
+        throw new Error(
+          result.message || `HTTP error! status: ${response.status}`
+        );
       }
 
       toast.success(result.message || "Pembayaran berhasil dikirim");
-      
+
       // Clear localStorage and refresh payment history
       localStorage.removeItem("pendingPaymentReservationId");
       localStorage.removeItem("paymentType");
       setShowModal(false);
-      
+
       // Refresh payment history
       fetchPaymentHistory(currentPage);
-
     } catch (error) {
       console.error("Payment failed:", error);
       toast.error(error.message || "Gagal melakukan pembayaran");
@@ -404,32 +417,32 @@ export default function PembayaranPage() {
           setIsLoading(false);
           return;
         }
-        
+
         // Load payment history
         await fetchPaymentHistory(1);
-        
+
         const id = getReservationId();
         const type = localStorage.getItem("paymentType");
         setPaymentType(type);
-        
+
         if (id) {
           const details = await fetchReservationDetails(id);
           if (details) {
             setReservationDetails(details);
-            
+
             // Set initial payment data based on type
-            if (type === 'remaining') {
-              setPaymentData(prev => ({
+            if (type === "remaining") {
+              setPaymentData((prev) => ({
                 ...prev,
-                jenis: 'lunas',
-                reservasi_fasilitas_id: id
+                jenis: "lunas",
+                reservasi_fasilitas_id: id,
               }));
             }
-            
+
             setShowModal(true);
           } else if (type) {
             toast.error("Detail reservasi tidak ditemukan");
-            router.push('/home/reservasi');
+            router.push("/home/reservasi");
           }
         }
       } catch (error) {
@@ -439,7 +452,7 @@ export default function PembayaranPage() {
         setIsLoading(false);
       }
     };
-    
+
     initializeComponent();
   }, []);
 
@@ -459,62 +472,89 @@ export default function PembayaranPage() {
       <div className="flex min-h-screen bg-gray-50">
         {/* Sidebar */}
         <AppSidebarUser />
-        
+
         {/* Main Content */}
         <div className="flex-1 p-8">
           <div className="max-w-7xl mx-auto">
-            <h1 className="text-3xl font-bold mb-8 text-blue-600">Pembayaran Reservasi</h1>
-            
+            <h1 className="text-3xl font-bold mb-8 text-blue-600">
+              Pembayaran Reservasi
+            </h1>
+
             {/* Payment Instructions */}
             <div className="bg-white rounded-lg shadow-md p-8 mb-8">
-              <h2 className="text-xl font-semibold mb-6">Instruksi Pembayaran</h2>
-              
+              <h2 className="text-xl font-semibold mb-6">
+                Instruksi Pembayaran
+              </h2>
+
               <div className="mb-8">
                 <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
-                  <h3 className="font-medium text-blue-800 mb-2">Informasi Rekening</h3>
+                  <h3 className="font-medium text-blue-800 mb-2">
+                    Informasi Rekening
+                  </h3>
                   <p className="text-blue-700">Bank BRI: 1234-5678-9012-3456</p>
-                  <p className="text-blue-700">A.n. Pengelola Fasilitas</p>
+                  <p className="text-blue-700">A.n. Joseph Samuel Ismail</p>
                 </div>
-                
+
                 <div className="bg-yellow-50 border-l-4 border-yellow-500 p-4">
-                  <h3 className="font-medium text-yellow-800 mb-2">Catatan Penting</h3>
+                  <h3 className="font-medium text-yellow-800 mb-2">
+                    Catatan Penting
+                  </h3>
                   <ul className="list-disc list-inside text-yellow-700 space-y-1">
                     <li>Pembayaran DP minimal 30% dari total biaya</li>
                     <li>Pembayaran lunas harus dilakukan maksimal H-1 acara</li>
                     <li>Konfirmasi pembayaran akan diproses dalam 1x24 jam</li>
-                    <li>Jika ada pertanyaan, silakan hubungi admin di (021) 1234-5678</li>
+                    <li>
+                      Jika ada pertanyaan, silakan hubungi admin di (021)
+                      1234-5678
+                    </li>
                   </ul>
                 </div>
               </div>
 
               <div className="text-center">
-                <button
+                {/* <button
                   onClick={() => setShowModal(true)}
                   className="bg-blue-500 hover:bg-blue-600 text-white font-medium py-2 px-6 rounded-lg transition-colors"
                 >
                   Buat Pembayaran Baru
-                </button>
+                </button> */}
               </div>
             </div>
 
             {/* Payment History Table */}
             <div className="bg-white rounded-lg shadow-md">
               <div className="p-6 border-b border-gray-200">
-                <h2 className="text-xl font-semibold text-gray-900">Riwayat Transaksi</h2>
-                <p className="text-sm text-gray-600 mt-1">Daftar pembayaran yang telah Anda lakukan</p>
+                <h2 className="text-xl font-semibold text-gray-900">
+                  Riwayat Transaksi
+                </h2>
+                <p className="text-sm text-gray-600 mt-1">
+                  Daftar pembayaran yang telah Anda lakukan
+                </p>
               </div>
-              
+
               <div className="overflow-x-auto">
                 {isLoadingHistory ? (
                   <div className="flex justify-center items-center py-12">
                     <div className="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-blue-500"></div>
-                    <span className="ml-2 text-gray-600">Memuat riwayat transaksi...</span>
+                    <span className="ml-2 text-gray-600">
+                      Memuat riwayat transaksi...
+                    </span>
                   </div>
                 ) : paymentHistory.length === 0 ? (
                   <div className="text-center py-12">
                     <div className="text-gray-400 mb-4">
-                      <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2z" />
+                      <svg
+                        className="mx-auto h-12 w-12"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h10a2 2 0 012 2v14a2 2 0 01-2 2z"
+                        />
                       </svg>
                     </div>
                     <p className="text-gray-500">Belum ada riwayat transaksi</p>
@@ -545,28 +585,52 @@ export default function PembayaranPage() {
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
                       {paymentHistory.map((payment, index) => (
-                        <tr key={payment.id || index} className="hover:bg-gray-50">
+                        <tr
+                          key={payment.id || index}
+                          className="hover:bg-gray-50"
+                        >
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatDate(payment.reservasi?.tgl_reservasi || payment.tanggal)}
+                            {formatDate(
+                              payment.reservasi?.tgl_reservasi ||
+                                payment.tanggal
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeBadge(payment.jenis)}`}>
-                              {payment.jenis === 'dp' ? 'DP' : payment.jenis === 'lunas' ? 'Lunas' : payment.jenis?.toUpperCase()}
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeBadge(
+                                payment.jenis
+                              )}`}
+                            >
+                              {payment.jenis === "dp"
+                                ? "DP"
+                                : payment.jenis === "lunas"
+                                ? "Lunas"
+                                : payment.jenis?.toUpperCase()}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                            {formatCurrency(payment.jumlah_pembayaran || payment.jumlah)}
+                            {formatCurrency(
+                              payment.jumlah_pembayaran || payment.jumlah
+                            )}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 capitalize">
                             {payment.metode_pembayaran || payment.metode}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusTypeBadge(payment.status)}`}>
-                              {payment.status === 'pending' ? 'Menunggu' :
-                               payment.status === 'paid' ? 'Dibayar' :
-                               payment.status === 'unpaid' ? 'Belum Dibayar' :
-                               payment.status === 'belum lunas' ? 'Belum Lunas' :
-                               payment.status || 'Unknown'}
+                            <span
+                              className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusTypeBadge(
+                                payment.status
+                              )}`}
+                            >
+                              {payment.status === "pending"
+                                ? "Menunggu"
+                                : payment.status === "paid"
+                                ? "Dibayar"
+                                : payment.status === "unpaid"
+                                ? "Belum Dibayar"
+                                : payment.status === "belum lunas"
+                                ? "Belum Lunas"
+                                : payment.status || "Unknown"}
                             </span>
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
@@ -575,21 +639,44 @@ export default function PembayaranPage() {
                                 onClick={() => setDetailItem(payment)}
                                 className="text-blue-600 hover:text-blue-900"
                               >
-                                <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                <svg
+                                  className="h-5 w-5"
+                                  fill="none"
+                                  viewBox="0 0 24 24"
+                                  stroke="currentColor"
+                                >
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"
+                                  />
+                                  <path
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                    strokeWidth={2}
+                                    d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"
+                                  />
                                 </svg>
                               </button>
                               {payment.bukti_transfer && (
                                 <a
-                                  href={`http://127.0.0.1:8000/storage/${payment.bukti_transfer}`}
+                                  href={`${apiUrl}/storage/${payment.bukti_transfer}`}
                                   target="_blank"
                                   rel="noopener noreferrer"
                                   className="text-green-600 hover:text-green-900"
                                 >
-                                  <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} 
-                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" 
+                                  <svg
+                                    className="h-5 w-5"
+                                    fill="none"
+                                    viewBox="0 0 24 24"
+                                    stroke="currentColor"
+                                  >
+                                    <path
+                                      strokeLinecap="round"
+                                      strokeLinejoin="round"
+                                      strokeWidth={2}
+                                      d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"
                                     />
                                   </svg>
                                 </a>
@@ -625,50 +712,84 @@ export default function PembayaranPage() {
                   <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
                     <div>
                       <p className="text-sm text-gray-700">
-                        Showing{' '}
-                        <span className="font-medium">{Math.min((currentPage - 1) * itemsPerPage + 1, paymentHistory.length)}</span>
-                        {' '}to{' '}
-                        <span className="font-medium">{Math.min(currentPage * itemsPerPage, paymentHistory.length)}</span>
-                        {' '}of{' '}
-                        <span className="font-medium">{paymentHistory.length}</span>
-                        {' '}results
+                        Showing{" "}
+                        <span className="font-medium">
+                          {Math.min(
+                            (currentPage - 1) * itemsPerPage + 1,
+                            paymentHistory.length
+                          )}
+                        </span>{" "}
+                        to{" "}
+                        <span className="font-medium">
+                          {Math.min(
+                            currentPage * itemsPerPage,
+                            paymentHistory.length
+                          )}
+                        </span>{" "}
+                        of{" "}
+                        <span className="font-medium">
+                          {paymentHistory.length}
+                        </span>{" "}
+                        results
                       </p>
                     </div>
                     <div>
-                      <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                      <nav
+                        className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px"
+                        aria-label="Pagination"
+                      >
                         <button
                           onClick={() => handlePageChange(currentPage - 1)}
                           disabled={currentPage === 1}
                           className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">Previous</span>
-                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z" clipRule="evenodd" />
+                          <svg
+                            className="h-5 w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M12.707 5.293a1 1 0 010 1.414L9.414 10l3.293 3.293a1 1 0 01-1.414 1.414l-4-4a1 1 0 010-1.414l4-4a1 1 0 011.414 0z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         </button>
-                        
-                        {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+
+                        {Array.from(
+                          { length: totalPages },
+                          (_, i) => i + 1
+                        ).map((page) => (
                           <button
                             key={page}
                             onClick={() => handlePageChange(page)}
                             className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
                               page === currentPage
-                                ? 'z-10 bg-blue-50 border-blue-500 text-blue-600'
-                                : 'bg-white border-gray-300 text-gray-500 hover:bg-gray-50'
+                                ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
+                                : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                           >
                             {page}
                           </button>
                         ))}
-                        
+
                         <button
                           onClick={() => handlePageChange(currentPage + 1)}
                           disabled={currentPage === totalPages}
                           className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <span className="sr-only">Next</span>
-                          <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                            <path fillRule="evenodd" d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z" clipRule="evenodd" />
+                          <svg
+                            className="h-5 w-5"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
+                              clipRule="evenodd"
+                            />
                           </svg>
                         </button>
                       </nav>
@@ -684,58 +805,139 @@ export default function PembayaranPage() {
       {/* Payment Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-opacity-10 backdrop-blur-md flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg shadow-lg max-w-md w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Form Pembayaran</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Form Pembayaran
+                </h3>
                 <button
                   onClick={() => setShowModal(false)}
                   className="text-gray-500 hover:text-gray-700 focus:outline-none"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
 
               {reservationDetails && (
                 <div className="mb-6 bg-gray-50 p-4 rounded-lg">
-                  <h4 className="font-medium text-gray-700 mb-2">Detail Reservasi:</h4>
+                  <h4 className="font-medium text-gray-700 mb-2">
+                    Detail Reservasi:
+                  </h4>
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Tanggal:</span> {new Date(reservationDetails.tgl_reservasi).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}
+                    <span className="font-medium">Tanggal:</span>{" "}
+                    {new Date(
+                      reservationDetails.tgl_reservasi
+                    ).toLocaleDateString("id-ID", {
+                      day: "numeric",
+                      month: "long",
+                      year: "numeric",
+                    })}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Acara:</span> {reservationDetails.acara?.nama_acara || '-'}
+                    <span className="font-medium">Acara:</span>{" "}
+                    {reservationDetails.acara?.nama_acara || "-"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Fasilitas:</span> {reservationDetails.fasilitas?.nama_fasilitas || '-'}
+                    <span className="font-medium">Fasilitas:</span>{" "}
+                    {reservationDetails.fasilitas?.nama_fasilitas || "-"}
                   </p>
                   <p className="text-sm text-gray-600">
-                    <span className="font-medium">Total Biaya:</span> {formatCurrency(priceDetails.totalPrice)}
+                    <span className="font-medium">Total Biaya:</span>{" "}
+                    {formatCurrency(priceDetails.totalPrice)}
                   </p>
                 </div>
               )}
 
               <form onSubmit={handleSubmitPayment} className="space-y-4">
+                {/* Add Bank Account Info Box */}
+                <div className="bg-blue-50 border-l-4 border-blue-500 p-4 mb-6">
+                  <h4 className="font-medium text-blue-800 mb-2">
+                    Informasi Rekening Bank
+                  </h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-blue-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"
+                        />
+                      </svg>
+                      <span className="text-blue-700 font-medium">
+                        Bank BRI:
+                      </span>
+                      <span className="text-blue-700">1234-5678-9012-3456</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-5 w-5 text-blue-600"
+                        fill="none"
+                        viewBox="0 0 24 24"
+                        stroke="currentColor"
+                      >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+                        />
+                      </svg>
+                      <span className="text-blue-700 font-medium">A.n:</span>
+                      <span className="text-blue-700">
+                        Joseph Samuel Ismail
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Jenis Pembayaran
                   </label>
-                  {paymentType === 'dp' && (
+                  {paymentType === "dp" && (
                     <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-                      <span className="text-gray-700">DP (30% - {formatCurrency(priceDetails.dpAmount)})</span>
+                      <span className="text-gray-700">
+                        DP (30% - {formatCurrency(priceDetails.dpAmount)})
+                      </span>
                       <input type="hidden" name="jenis" value="dp" />
                     </div>
                   )}
-                  {paymentType === 'pelunasan' && (
+                  {paymentType === "pelunasan" && (
                     <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-                      <span className="text-gray-700">Pelunasan (70% - {formatCurrency(priceDetails.remainingAmount)})</span>
+                      <span className="text-gray-700">
+                        Pelunasan (70% -{" "}
+                        {formatCurrency(priceDetails.remainingAmount)})
+                      </span>
                       <input type="hidden" name="jenis" value="pelunasan" />
                     </div>
                   )}
-                  {paymentType === 'full' && (
+                  {paymentType === "full" && (
                     <div className="px-3 py-2 border border-gray-300 rounded-md bg-gray-50">
-                      <span className="text-gray-700">Pembayaran Lunas (100% - {formatCurrency(priceDetails.totalPrice)})</span>
+                      <span className="text-gray-700">
+                        Pembayaran Lunas (100% -{" "}
+                        {formatCurrency(priceDetails.totalPrice)})
+                      </span>
                       <input type="hidden" name="jenis" value="lunas" />
                     </div>
                   )}
@@ -747,8 +949,13 @@ export default function PembayaranPage() {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                       required
                     >
-                      <option value="dp">DP (30% - {formatCurrency(priceDetails.dpAmount)})</option>
-                      <option value="lunas">Pembayaran Lunas (100% - {formatCurrency(priceDetails.totalPrice)})</option>
+                      <option value="dp">
+                        DP (30% - {formatCurrency(priceDetails.dpAmount)})
+                      </option>
+                      <option value="lunas">
+                        Pembayaran Lunas (100% -{" "}
+                        {formatCurrency(priceDetails.totalPrice)})
+                      </option>
                     </select>
                   )}
                 </div>
@@ -765,8 +972,9 @@ export default function PembayaranPage() {
                     required
                   >
                     <option value="transfer">Transfer Bank</option>
-                    <option value="cash">Cash</option>
-                    <option value="ewallet">E-Wallet</option>
+                    <option value="tunai" disabled>
+                      Akan Datang...
+                    </option>
                   </select>
                 </div>
 
@@ -844,13 +1052,25 @@ export default function PembayaranPage() {
           <div className="bg-white rounded-lg shadow-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
             <div className="p-6">
               <div className="flex justify-between items-center mb-4">
-                <h3 className="text-xl font-bold text-gray-900">Detail Pembayaran</h3>
+                <h3 className="text-xl font-bold text-gray-900">
+                  Detail Pembayaran
+                </h3>
                 <button
                   onClick={() => setDetailItem(null)}
                   className="text-gray-500 hover:text-gray-700"
                 >
-                  <svg className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  <svg
+                    className="h-6 w-6"
+                    fill="none"
+                    viewBox="0 0 24 24"
+                    stroke="currentColor"
+                  >
+                    <path
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                      strokeWidth={2}
+                      d="M6 18L18 6M6 6l12 12"
+                    />
                   </svg>
                 </button>
               </div>
@@ -858,48 +1078,79 @@ export default function PembayaranPage() {
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <h4 className="font-medium text-gray-700">Informasi Reservasi</h4>
+                    <h4 className="font-medium text-gray-700">
+                      Informasi Reservasi
+                    </h4>
                     <div className="mt-2 space-y-2">
                       <p className="text-sm">
-                        <span className="text-gray-600">ID Reservasi:</span>{' '}
-                        <span className="font-medium">#{detailItem.reservasi_fasilitas_id}</span>
+                        <span className="text-gray-600">ID Reservasi:</span>{" "}
+                        <span className="font-medium">
+                          #{detailItem.reservasi_fasilitas_id}
+                        </span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-gray-600">Tanggal Reservasi:</span>{' '}
-                        <span className="font-medium">{formatDate(detailItem.reservasi?.tgl_reservasi)}</span>
+                        <span className="text-gray-600">
+                          Tanggal Reservasi:
+                        </span>{" "}
+                        <span className="font-medium">
+                          {formatDate(detailItem.reservasi?.tgl_reservasi)}
+                        </span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-gray-600">Status Pembayaran:</span>{' '}
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusTypeBadge(detailItem.status)}`}>
-                          {detailItem.status === 'pending' ? 'Menunggu' :
-                           detailItem.status === 'paid' ? 'Dibayar' :
-                           detailItem.status === 'unpaid' ? 'Belum Dibayar' :
-                           detailItem.status === 'belum lunas' ? 'Belum Lunas' :
-                           detailItem.status?.toUpperCase() || 'Unknown'}
+                        <span className="text-gray-600">
+                          Status Pembayaran:
+                        </span>{" "}
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusTypeBadge(
+                            detailItem.status
+                          )}`}
+                        >
+                          {detailItem.status === "pending"
+                            ? "Menunggu"
+                            : detailItem.status === "paid"
+                            ? "Dibayar"
+                            : detailItem.status === "unpaid"
+                            ? "Belum Dibayar"
+                            : detailItem.status === "belum lunas"
+                            ? "Belum Lunas"
+                            : detailItem.status?.toUpperCase() || "Unknown"}
                         </span>
                       </p>
                     </div>
                   </div>
 
                   <div>
-                    <h4 className="font-medium text-gray-700">Detail Pembayaran</h4>
+                    <h4 className="font-medium text-gray-700">
+                      Detail Pembayaran
+                    </h4>
                     <div className="mt-2 space-y-2">
                       <p className="text-sm">
-                        <span className="text-gray-600">Jenis Pembayaran:</span>{' '}
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeBadge(detailItem.jenis)}`}>
-                          {detailItem.jenis === 'dp' ? 'DP' : 
-                           detailItem.jenis === 'lunas' ? 'Lunas' :
-                           detailItem.jenis === 'pelunasan' ? 'Pelunasan' :
-                           detailItem.jenis?.toUpperCase()}
+                        <span className="text-gray-600">Jenis Pembayaran:</span>{" "}
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPaymentTypeBadge(
+                            detailItem.jenis
+                          )}`}
+                        >
+                          {detailItem.jenis === "dp"
+                            ? "DP"
+                            : detailItem.jenis === "lunas"
+                            ? "Lunas"
+                            : detailItem.jenis === "pelunasan"
+                            ? "Pelunasan"
+                            : detailItem.jenis?.toUpperCase()}
                         </span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-gray-600">Jumlah:</span>{' '}
-                        <span className="font-medium text-green-600">{formatCurrency(detailItem.jumlah_pembayaran)}</span>
+                        <span className="text-gray-600">Jumlah:</span>{" "}
+                        <span className="font-medium text-green-600">
+                          {formatCurrency(detailItem.jumlah_pembayaran)}
+                        </span>
                       </p>
                       <p className="text-sm">
-                        <span className="text-gray-600">Metode:</span>{' '}
-                        <span className="font-medium capitalize">{detailItem.metode_pembayaran}</span>
+                        <span className="text-gray-600">Metode:</span>{" "}
+                        <span className="font-medium capitalize">
+                          {detailItem.metode_pembayaran}
+                        </span>
                       </p>
                     </div>
                   </div>
@@ -907,15 +1158,17 @@ export default function PembayaranPage() {
 
                 {detailItem.bukti_transfer && (
                   <div>
-                    <h4 className="font-medium text-gray-700 mb-2">Bukti Transfer</h4>
+                    <h4 className="font-medium text-gray-700 mb-2">
+                      Bukti Transfer
+                    </h4>
                     <div className="border border-gray-200 rounded-lg p-2">
                       <img
-                        src={`http://127.0.0.1:8000/storage/${detailItem.bukti_transfer}`}
+                        src={`${apiUrl}/storage/${detailItem.bukti_transfer}`}
                         alt="Bukti transfer"
                         className="max-h-64 object-contain mx-auto"
                         onError={(e) => {
                           e.target.onerror = null;
-                          e.target.src = '/placeholder-image.png'; // Gambar placeholder jika gagal load
+                          e.target.src = "/placeholder-image.png"; // Gambar placeholder jika gagal load
                         }}
                       />
                     </div>

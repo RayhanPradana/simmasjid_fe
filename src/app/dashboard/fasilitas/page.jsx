@@ -65,7 +65,9 @@ import { toast } from "react-hot-toast";
 import { Editor } from "@tinymce/tinymce-react"
 
 export default function Page() {
-  const API_BASE_URL = "http://127.0.0.1:8000/api/fasilitas"
+  // const API_BASE_URL = "http://127.0.0.1:8000/api/fasilitas"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
   
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
@@ -137,7 +139,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/fasilitas`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -204,7 +206,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token");
       
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/fasilitas/${id}`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -278,7 +280,7 @@ export default function Page() {
         formDataToSend.append('gambar', facilityData.gambar);
       }
       
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/fasilitas`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -327,7 +329,7 @@ export default function Page() {
         formDataToSend.append('gambar', facilityData.gambar);
       }
       
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/fasilitas/${id}`, {
         method: "POST", // Keep as POST for FormData
         headers: {
           "Accept": "application/json",
@@ -358,7 +360,7 @@ export default function Page() {
     try {
       const token = localStorage.getItem("token");
       
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/fasilitas/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",

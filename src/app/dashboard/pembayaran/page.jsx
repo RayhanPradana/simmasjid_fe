@@ -82,7 +82,9 @@ const useAuthRedirect = () => {
 }
 
 // API base URLs
-const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
+// const API_BASE_URL = "http://127.0.0.1:8000/api/pembayaran"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
 
 
 export default function Page() {
@@ -260,7 +262,7 @@ export default function Page() {
       const token = localStorage.getItem("token");
       if (!token) return;
 
-      const response = await fetch(API_BASE_URL, {
+      const response = await fetch(`${apiUrl}/api/pembayaran`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -409,7 +411,7 @@ export default function Page() {
       const token = getToken();
       if (!token) return;
 
-      const response = await fetch(`${API_BASE_URL}/${detailItem.id}`, {
+      const response = await fetch(`${apiUrl}/api/pembayaran/${detailItem.id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -487,7 +489,7 @@ export default function Page() {
         bukti_transfer: paymentData.bukti_transfer ? 'File present' : 'No file'
       });
 
-      const response = await fetch(API_BASE_URL, {
+      const response = await fetch(`${apiUrl}/api/pembayaran`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -664,7 +666,7 @@ export default function Page() {
       const token = getToken()
       if (!token) return
 
-      const response = await fetch(`${API_BASE_URL}/${selectedItemId}`, {
+      const response = await fetch(`${apiUrl}/api/pembayaran/${selectedItemId}`, {
         method: "DELETE",
         headers: {
           "Authorization": `Bearer ${token}`,
@@ -766,14 +768,10 @@ export default function Page() {
               <CardContent>
                 {/* Tabs */}
                 <Tabs defaultValue="all" value={currentTab} onValueChange={handleTabChange} className="mb-4">
-                  <TabsList className="grid grid-cols-3 md:grid-cols-7 w-full">
+                  <TabsList className="grid grid-cols-3 md:grid-cols-3   w-full">
                     <TabsTrigger value="all">Semua</TabsTrigger>
-                    <TabsTrigger value="pending">Pending</TabsTrigger>
-                    <TabsTrigger value="paid">Dibayar</TabsTrigger>
                     <TabsTrigger value="belum lunas">Belum Lunas</TabsTrigger>
-                    <TabsTrigger value="unpaid">Belum Dibayar</TabsTrigger>
-                    <TabsTrigger value="dp">DP</TabsTrigger>
-                    <TabsTrigger value="lunas">Lunas</TabsTrigger>
+                    <TabsTrigger value="paid">Dibayar</TabsTrigger>
                   </TabsList>
                 </Tabs>
 
@@ -876,25 +874,6 @@ export default function Page() {
                                 <Button variant="ghost" size="icon" onClick={() => handleDetails(item)} title="Lihat Detail">
                                   <Eye className="h-4 w-4" />
                                 </Button>
-                                
-                                {canUpdatePayment(item) && (
-                                  <>
-                                    <Button variant="ghost" size="icon" 
-                                      onClick={() => handleVerificationModal(item)} 
-                                      title="Update Status Pembayaran">
-                                      <Edit className="h-4 w-4 text-blue-600" />
-                                    </Button>
-
-                                    <Button variant="ghost" size="icon"
-                                      onClick={() => {
-                                        setSelectedItemId(item.id)
-                                        setIsDeleteModalOpen(true)
-                                      }}
-                                      title="Hapus Pembayaran">
-                                      <Trash2 className="h-4 w-4 text-red-600" />
-                                    </Button>
-                                  </>
-                                )}
                                 
                                 {canMakeFullPayment(item) && (
                                   <Button variant="ghost" size="icon"
@@ -1088,15 +1067,6 @@ export default function Page() {
                     </div>
                   </div>
                 )}
-                
-                {/* {detailItem.catatan && (
-                  <div>
-                    <Label className="text-sm font-medium text-gray-500">
-                      <Info className="h-4 w-4 inline mr-1" /> Catatan
-                    </Label>
-                    <p className="text-sm">{detailItem.catatan}</p>
-                  </div>
-                )} */}
               </div>
             )}
             <DialogFooter>

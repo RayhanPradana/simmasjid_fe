@@ -9,7 +9,9 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 
-const API_BASE_URL = "http://127.0.0.1:8000/api";
+// const API_BASE_URL = "http://127.0.0.1:8000/api";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
 
 export default function ReservasiPage() {
   const router = useRouter();
@@ -68,7 +70,7 @@ export default function ReservasiPage() {
     try {
       const token = localStorage.getItem("token");
 
-      const response = await fetch(`${API_BASE_URL}/reservasiuser`, {
+      const response = await fetch(`${apiUrl}/api/reservasiuser`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -120,7 +122,7 @@ export default function ReservasiPage() {
       
       // Fetch acara data
       try {
-        const acaraResponse = await fetch(`${API_BASE_URL}/acarauser`, {
+        const acaraResponse = await fetch(`${apiUrl}/api/acarauser`, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -150,7 +152,7 @@ export default function ReservasiPage() {
       
       // Fetch fasilitas data
       try {
-        const fasilitasResponse = await fetch(`${API_BASE_URL}/fasilitasuser`, {
+        const fasilitasResponse = await fetch(`${apiUrl}/api/fasilitasuser`, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -176,7 +178,7 @@ export default function ReservasiPage() {
       
       // Fetch sesi data
       try {
-        const sesiResponse = await fetch(`${API_BASE_URL}/sesiuser`, {
+        const sesiResponse = await fetch(`${apiUrl}/api/sesiuser`, {
           headers: {
             "Content-Type": "application/json",
             "Accept": "application/json",
@@ -203,7 +205,7 @@ export default function ReservasiPage() {
       // Fetch users for admin
       if (user && user.role === 'admin') {
         try {
-          const usersResponse = await fetch(`${API_BASE_URL}/usersuser`, {
+          const usersResponse = await fetch(`${apiUrl}/api/usersuser`, {
             headers: {
               "Content-Type": "application/json",
               "Accept": "application/json",
@@ -417,7 +419,7 @@ export default function ReservasiPage() {
 
       console.log("Submitting reservation payload:", payload);
 
-      const response = await fetch(`${API_BASE_URL}/reservasiuser`, {
+      const response = await fetch(`${apiUrl}/api/reservasiuser`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -556,6 +558,20 @@ export default function ReservasiPage() {
     setIsDetailModalOpen(true);
   };
 
+  // Add this helper function
+  const formatDescription = (text) => {
+    if (!text) return '';
+    let formattedText = text;
+    // Handle bold text (between ** or __)
+    formattedText = formattedText.replace(/(\*\*|__)(.*?)\1/g, '<strong>$2</strong>');
+    // Handle bullet points
+    formattedText = formattedText.replace(/^\s*[-*•]\s+(.+)$/gm, '<li>$1</li>');
+    formattedText = formattedText.replace(/(<li>.*<\/li>)/gs, '<ul class="list-disc pl-4">$1</ul>');
+    // Handle line breaks
+    // formattedText = formattedText.replace(/\n/g, '<br/>');
+    return formattedText;
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -610,17 +626,11 @@ export default function ReservasiPage() {
                       selectedAcara === item.id.toString() ? 'ring-4 ring-green-500' : ''
                     }`}
                   >
-                    {/* Price badge - more prominent */}
-                    <div className="absolute top-4 right-4 z-10">
-                      <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-1">
-                        <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
-                      </div>
-                    </div>
-
-                    <div className="relative h-48 bg-green-100">
+                    {/* Card Header - Image */}
+                    <div className="relative h-48">
                       {item.gambar ? (
                         <img
-                          src={`http://127.0.0.1:8000/storage/${item.gambar}`}
+                          src={`${apiUrl}/storage/${item.gambar}`}
                           alt={item.nama_acara}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -634,12 +644,22 @@ export default function ReservasiPage() {
                           </svg>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/20 transition-opacity group-hover:opacity-100 opacity-0"></div>
+                      {/* Price badge */}
+                      <div className="absolute top-4 right-4">
+                        <div className="bg-white/90 backdrop-blur-sm shadow-lg rounded-full px-4 py-2">
+                          <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
+                        </div>
+                      </div>
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
                     </div>
-                    
+
+                    {/* Card Content */}
                     <div className="p-5">
+                      {/* Title and Info button */}
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-bold text-lg text-gray-900">{item.nama_acara}</h3>
+                        <h3 className="font-bold text-lg text-gray-900 line-clamp-1">
+                          {item.nama_acara}
+                        </h3>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -653,19 +673,19 @@ export default function ReservasiPage() {
                           </svg>
                         </button>
                       </div>
-                      
-                      <div className="relative">
-                        <div 
-                          className="prose prose-sm max-w-none overflow-hidden mb-4"
-                          style={{ maxHeight: '60px' }}
+
+                      {/* Description */}
+                      <div className="prose prose-sm max-w-none mb-4 h-20 overflow-hidden">
+                        <div
+                          className="line-clamp-3"
                           dangerouslySetInnerHTML={{ 
-                            __html: item.deskripsi || "Tidak ada deskripsi"
+                            __html: formatDescription(item.deskripsi) || "Tidak ada deskripsi"
                           }}
                         />
-                        <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-white pointer-events-none"></div>
                       </div>
-                      
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+
+                      {/* Actions */}
+                      <div className="pt-4 border-t border-gray-100 flex justify-between items-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -721,17 +741,11 @@ export default function ReservasiPage() {
                       selectedFasilitas === item.id.toString() ? 'ring-4 ring-green-500' : ''
                     }`}
                   >
-                    {/* Price badge - more prominent */}
-                    <div className="absolute top-4 right-4 z-10">
-                      <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-1">
-                        <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
-                      </div>
-                    </div>
-
-                    <div className="relative h-48 bg-green-100">
+                    {/* Card Header - Image */}
+                    <div className="relative h-48">
                       {item.gambar ? (
                         <img
-                          src={`http://127.0.0.1:8000/storage/${item.gambar}`}
+                          src={`${apiUrl}/storage/${item.gambar}`}
                           alt={item.nama_fasilitas}
                           className="w-full h-full object-cover"
                           onError={(e) => {
@@ -745,12 +759,21 @@ export default function ReservasiPage() {
                           </svg>
                         </div>
                       )}
-                      <div className="absolute inset-0 bg-black/20 transition-opacity group-hover:opacity-100 opacity-0"></div>
+                      {/* Price badge */}
+                      <div className="absolute top-4 right-4">
+                        <div className="bg-white shadow-lg rounded-full px-4 py-2">
+                          <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
+                        </div>
+                      </div>
                     </div>
-                    
+
+                    {/* Card Content */}
                     <div className="p-5">
+                      {/* Title and Info button */}
                       <div className="flex justify-between items-start mb-3">
-                        <h3 className="font-bold text-lg text-gray-900">{item.nama_fasilitas}</h3>
+                        <h3 className="font-bold text-lg text-gray-900 line-clamp-1">
+                          {item.nama_fasilitas}
+                        </h3>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -764,19 +787,19 @@ export default function ReservasiPage() {
                           </svg>
                         </button>
                       </div>
-                      
-                      <div className="relative">
-                        <div 
-                          className="prose prose-sm max-w-none overflow-hidden mb-4"
-                          style={{ maxHeight: '60px' }}
+
+                      {/* Description */}
+                      <div className="prose prose-sm max-w-none mb-4 h-20 overflow-hidden">
+                        <div
+                          className="line-clamp-3"
                           dangerouslySetInnerHTML={{ 
                             __html: item.keterangan || "Tidak ada deskripsi"
                           }}
                         />
-                        <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-white pointer-events-none"></div>
                       </div>
-                      
-                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+
+                      {/* Actions */}
+                      <div className="mt-auto pt-4 border-t border-gray-100 flex justify-between items-center">
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -1063,7 +1086,7 @@ export default function ReservasiPage() {
 
       {/* Detail Modal - Enhanced for both Acara and Fasilitas */}
       <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-        <DialogContent className="max-w-3xl">
+        <DialogContent className="max-w-4xl">
           <DialogHeader>
             <DialogTitle className="text-2xl">
               {detailItem?.nama_acara || detailItem?.nama_fasilitas}
@@ -1073,39 +1096,39 @@ export default function ReservasiPage() {
             </DialogDescription>
           </DialogHeader>
           {detailItem && (
-            <div className="mt-4 space-y-6">
-              <div className="aspect-video relative overflow-hidden rounded-xl shadow-lg">
-                {detailItem.gambar ? (
-                  <img
-                    src={`http://127.0.0.1:8000/storage/${detailItem.gambar}`}
-                    alt={detailItem.nama_acara || detailItem.nama_fasilitas}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
-                    <span className="text-gray-400">Tidak ada gambar</span>
-                  </div>
-                )}
-              </div>
-              <div className="bg-gray-50 p-6 rounded-lg">
-                <div className="prose prose-green max-w-none">
-                  <div
-                    dangerouslySetInnerHTML={{ 
-                      __html: detailItem.deskripsi || detailItem.keterangan || '-'
-                    }}
-                  />
+            <div className="mt-4 grid grid-cols-2 gap-6">
+              <div className="space-y-4">
+                <div className="aspect-4/3 relative overflow-hidden rounded-xl shadow-lg">
+                  {detailItem.gambar ? (
+                    <img
+                      src={`${apiUrl}/storage/${detailItem.gambar}`}
+                      alt={detailItem.nama_acara || detailItem.nama_fasilitas}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                      <span className="text-gray-400">Tidak ada gambar</span>
+                    </div>
+                  )}
                 </div>
-              </div>
-              <div className="flex justify-between items-center pt-4 border-t">
-                <div className="flex items-center gap-2">
+                <div className="flex justify-between items-center bg-gray-50 p-4 rounded-lg">
                   <span className="text-sm text-gray-500">Biaya:</span>
                   <span className="text-xl font-semibold text-green-600">
                     {formatRupiah(detailItem.harga)}
                   </span>
                 </div>
-                <Badge variant={detailItem.status === 'tersedia' ? 'success' : 'destructive'}>
+                <Badge variant={detailItem.status === 'tersedia' ? 'success' : 'destructive'} className="w-full justify-center py-2 text-sm">
                   {detailItem.status === 'tersedia' ? 'Tersedia' : 'Tidak Tersedia'}
                 </Badge>
+              </div>
+              <div className="bg-gray-50 p-6 rounded-lg overflow-y-auto max-h-[500px]">
+                <div className="prose prose-green max-w-none">
+                  <div
+                    dangerouslySetInnerHTML={{ 
+                      __html: formatDescription(detailItem.deskripsi || detailItem.keterangan) || '-'
+                    }}
+                  />
+                </div>
               </div>
             </div>
           )}

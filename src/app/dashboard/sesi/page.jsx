@@ -56,7 +56,8 @@ import toast from "react-hot-toast";
 
 
 export default function Page() {
-  const API_BASE_URL = "http://127.0.0.1:8000/api/sesi"
+  // const API_BASE_URL = "http://127.0.0.1:8000/api/sesi"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
@@ -95,7 +96,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/sesi`, {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
@@ -128,7 +129,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/sesi/${id}`, {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
@@ -156,7 +157,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/sesi`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -195,7 +196,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/sesi/${id}`, {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
@@ -234,7 +235,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/sesi/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
