@@ -165,8 +165,9 @@ export default function Page() {
     { id: "news", label: "Berita", icon: <Newspaper size={16} /> },
   ];
 
-  const backendUrl = "http://127.0.0.1:8000";
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
+  
   useEffect(() => {
     const handleScroll = () => {
       setScrollY(window.scrollY);
@@ -222,7 +223,6 @@ export default function Page() {
 
     const handleLogout = async () => {
       try {
-        
         const token = localStorage.getItem('token');
 
         if (!token) {
@@ -230,7 +230,7 @@ export default function Page() {
           return;
         }
     
-        const response = await fetch('http://localhost:8000/api/logout', {
+        const response = await fetch(`${apiUrl}/api/logout`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -280,27 +280,6 @@ export default function Page() {
     
 
   useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch("http://127.0.0.1:8000/api/jadwals", {
-          method: "GET",
-          headers: {
-            "Content-Type": "application/json",
-          },
-        });
-        if (!response.ok) {
-          throw new Error("Gagal mengambil data kegiatan");
-        }
-        const result = await response.json();
-        setData(result.data || result);
-      } catch (error) {
-        console.error("Gagal memuat data:", error);
-      }
-    };
-    fetchData();
-  }, []);
-
-  useEffect(() => {
     const fetchAllData = async () => {
       try {
         const token = localStorage.getItem("token");
@@ -315,8 +294,8 @@ export default function Page() {
         };
 
         const [jadwalRes, beritaRes] = await Promise.all([
-          fetch("http://127.0.0.1:8000/api/jadwal1", { headers }),
-          fetch("http://127.0.0.1:8000/api/berita1", { headers }),
+          fetch(`${apiUrl}/api/jadwal1`, { headers }),
+          fetch(`${apiUrl}/api/berita1`, { headers }),
         ]);
 
         if (!jadwalRes.ok) throw new Error("Gagal mengambil data jadwal");

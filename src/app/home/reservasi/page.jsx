@@ -5,6 +5,9 @@ import { useRouter } from 'next/navigation';
 import { formatRupiah } from '@/utils/format';
 import { toast } from 'react-hot-toast';
 import AppSidebarUser from '@/components/app-sidebar-user';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 
 const API_BASE_URL = "http://127.0.0.1:8000/api";
 
@@ -25,6 +28,8 @@ export default function ReservasiPage() {
   const [currentUser, setCurrentUser] = useState(null);
   const [existingReservations, setExistingReservations] = useState([]);
   const [unavailableDates, setUnavailableDates] = useState([]);
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [detailItem, setDetailItem] = useState(null);
   
 
   // Get current user info
@@ -546,6 +551,11 @@ export default function ReservasiPage() {
     );
   }
 
+  const handleDetails = (item) => {
+    setDetailItem(item);
+    setIsDetailModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen bg-gray-50">
       {/* Sidebar */}
@@ -596,12 +606,18 @@ export default function ReservasiPage() {
                 {acara.filter(item => item.status === 'tersedia').map(item => (
                   <div 
                     key={item.id}
-                    onClick={() => handleAcaraSelect(item.id.toString())}
-                    className={`cursor-pointer transition-all duration-300 transform hover:scale-105 rounded-xl overflow-hidden shadow-md ${
-                      selectedAcara === item.id.toString() ? 'ring-4 ring-black-500' : ''
+                    className={`group relative bg-white transition-all duration-300 transform hover:-translate-y-1 rounded-xl overflow-hidden shadow-md hover:shadow-xl ${
+                      selectedAcara === item.id.toString() ? 'ring-4 ring-green-500' : ''
                     }`}
                   >
-                    <div className="h-40 bg-green-100 flex items-center justify-center">
+                    {/* Price badge - more prominent */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-1">
+                        <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
+                      </div>
+                    </div>
+
+                    <div className="relative h-48 bg-green-100">
                       {item.gambar ? (
                         <img
                           src={`http://127.0.0.1:8000/storage/${item.gambar}`}
@@ -612,19 +628,66 @@ export default function ReservasiPage() {
                           }}
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                        <div className="w-full h-full flex items-center justify-center bg-green-50">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
                           </svg>
                         </div>
                       )}
+                      <div className="absolute inset-0 bg-black/20 transition-opacity group-hover:opacity-100 opacity-0"></div>
                     </div>
-                    <div className="p-4"> 
-                      <h3 className="font-bold text-lg mb-2">{item.nama_acara}</h3>
-                      <p className="text-gray-600 mb-2">{item.deskripsi?.substring(0, 80) || "Tidak ada deskripsi"}...</p>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
-                        <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Pilih</span>
+                    
+                    <div className="p-5">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-bold text-lg text-gray-900">{item.nama_acara}</h3>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailItem(item);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="p-1 hover:bg-green-50 rounded-full text-green-600 hover:text-green-700 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      <div className="relative">
+                        <div 
+                          className="prose prose-sm max-w-none overflow-hidden mb-4"
+                          style={{ maxHeight: '60px' }}
+                          dangerouslySetInnerHTML={{ 
+                            __html: item.deskripsi || "Tidak ada deskripsi"
+                          }}
+                        />
+                        <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-white pointer-events-none"></div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailItem(item);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1 hover:underline"
+                        >
+                          <span>Lihat Detail</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleAcaraSelect(item.id.toString())}
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
+                        >
+                          <span>Pilih Acara</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -654,12 +717,18 @@ export default function ReservasiPage() {
                 {fasilitas.filter(item => item.status === 'tersedia').map(item => (
                   <div 
                     key={item.id}
-                    onClick={() => handleFasilitasSelect(item.id.toString())}
-                    className={`cursor-pointer transition-all duration-300 transform hover:scale-105 rounded-xl overflow-hidden shadow-md ${
-                      selectedFasilitas === item.id.toString() ? 'ring-4 ring-black-300' : ''
+                    className={`group relative bg-white transition-all duration-300 transform hover:-translate-y-1 rounded-xl overflow-hidden shadow-md hover:shadow-xl ${
+                      selectedFasilitas === item.id.toString() ? 'ring-4 ring-green-500' : ''
                     }`}
                   >
-                    <div className="h-40 bg-green-100 flex items-center justify-center">
+                    {/* Price badge - more prominent */}
+                    <div className="absolute top-4 right-4 z-10">
+                      <div className="bg-white shadow-lg rounded-full px-4 py-2 flex items-center space-x-1">
+                        <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
+                      </div>
+                    </div>
+
+                    <div className="relative h-48 bg-green-100">
                       {item.gambar ? (
                         <img
                           src={`http://127.0.0.1:8000/storage/${item.gambar}`}
@@ -670,19 +739,66 @@ export default function ReservasiPage() {
                           }}
                         />
                       ) : (
-                        <div className="w-16 h-16 rounded-full bg-green-500 flex items-center justify-center">
-                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <div className="w-full h-full flex items-center justify-center bg-green-50">
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-16 w-16 text-green-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
                           </svg>
                         </div>
                       )}
+                      <div className="absolute inset-0 bg-black/20 transition-opacity group-hover:opacity-100 opacity-0"></div>
                     </div>
-                    <div className="p-4">
-                      <h3 className="font-bold text-lg mb-2">{item.nama_fasilitas}</h3>
-                      <p className="text-gray-600 mb-2">{item.deskripsi?.substring(0, 80) || "Tidak ada deskripsi"}...</p>
-                      <div className="flex justify-between items-center mt-2">
-                        <span className="font-bold text-green-600">{formatRupiah(item.harga)}</span>
-                        <span className="text-sm bg-green-100 text-green-800 px-2 py-1 rounded-full">Pilih</span>
+                    
+                    <div className="p-5">
+                      <div className="flex justify-between items-start mb-3">
+                        <h3 className="font-bold text-lg text-gray-900">{item.nama_fasilitas}</h3>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailItem(item);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="p-1 hover:bg-green-50 rounded-full text-green-600 hover:text-green-700 transition-colors"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                        </button>
+                      </div>
+                      
+                      <div className="relative">
+                        <div 
+                          className="prose prose-sm max-w-none overflow-hidden mb-4"
+                          style={{ maxHeight: '60px' }}
+                          dangerouslySetInnerHTML={{ 
+                            __html: item.keterangan || "Tidak ada deskripsi"
+                          }}
+                        />
+                        <div className="absolute bottom-0 inset-x-0 h-8 bg-gradient-to-t from-white pointer-events-none"></div>
+                      </div>
+                      
+                      <div className="flex items-center justify-between mt-4 pt-4 border-t border-gray-100">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setDetailItem(item);
+                            setIsDetailModalOpen(true);
+                          }}
+                          className="text-sm text-green-600 hover:text-green-700 font-medium flex items-center gap-1 hover:underline"
+                        >
+                          <span>Lihat Detail</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        <button
+                          onClick={() => handleFasilitasSelect(item.id.toString())}
+                          className="px-4 py-2 bg-green-500 hover:bg-green-600 text-white text-sm font-medium rounded-lg transition-colors flex items-center space-x-2"
+                        >
+                          <span>Pilih Fasilitas</span>
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -944,6 +1060,62 @@ export default function ReservasiPage() {
           )}
         </div>
       </div>
+
+      {/* Detail Modal - Enhanced for both Acara and Fasilitas */}
+      <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle className="text-2xl">
+              {detailItem?.nama_acara || detailItem?.nama_fasilitas}
+            </DialogTitle>
+            <DialogDescription>
+              Informasi lengkap {detailItem?.nama_acara ? 'acara' : 'fasilitas'}
+            </DialogDescription>
+          </DialogHeader>
+          {detailItem && (
+            <div className="mt-4 space-y-6">
+              <div className="aspect-video relative overflow-hidden rounded-xl shadow-lg">
+                {detailItem.gambar ? (
+                  <img
+                    src={`http://127.0.0.1:8000/storage/${detailItem.gambar}`}
+                    alt={detailItem.nama_acara || detailItem.nama_fasilitas}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center">
+                    <span className="text-gray-400">Tidak ada gambar</span>
+                  </div>
+                )}
+              </div>
+              <div className="bg-gray-50 p-6 rounded-lg">
+                <div className="prose prose-green max-w-none">
+                  <div
+                    dangerouslySetInnerHTML={{ 
+                      __html: detailItem.deskripsi || detailItem.keterangan || '-'
+                    }}
+                  />
+                </div>
+              </div>
+              <div className="flex justify-between items-center pt-4 border-t">
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-500">Biaya:</span>
+                  <span className="text-xl font-semibold text-green-600">
+                    {formatRupiah(detailItem.harga)}
+                  </span>
+                </div>
+                <Badge variant={detailItem.status === 'tersedia' ? 'success' : 'destructive'}>
+                  {detailItem.status === 'tersedia' ? 'Tersedia' : 'Tidak Tersedia'}
+                </Badge>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDetailModalOpen(false)}>
+              Tutup
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
