@@ -39,7 +39,7 @@ import { useRouter } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();
-  const API_BASE_URL = "http://127.0.0.1:8000/api/dashboard";
+  // const API_BASE_URL = "http://127.0.0.1:8000/api/dashboard";
   const { toast } = useToast();
   const [error, setError] = useState(null);
   const isLoggedIn = useAuthRedirect();
@@ -82,6 +82,8 @@ export default function Page() {
     },
   });
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
   useEffect(() => {
     fetchDashboardData();
   }, []);
@@ -92,7 +94,7 @@ export default function Page() {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No authentication token found");
 
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/dashboard`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
