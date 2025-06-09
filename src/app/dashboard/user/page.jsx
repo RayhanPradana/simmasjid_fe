@@ -58,7 +58,6 @@ import {
 } from "@/components/ui/table";
 import toast from "react-hot-toast";
 
-
 export default function Page() {
   const isLoggedIn = useAuthRedirect();
 
@@ -76,6 +75,7 @@ export default function Page() {
   const [isEditing, setIsEditing] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 5;
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const [form, setForm] = useState({
     name: "",
@@ -98,7 +98,7 @@ export default function Page() {
         const token = localStorage.getItem("token");
         if (!token) return;
 
-        const response = await fetch("http://127.0.0.1:8000/api/users", {
+        const response = await fetch(`${apiUrl}/api/users`, {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
@@ -162,7 +162,7 @@ export default function Page() {
       id: item.id,
       name: item.name,
       email: item.email,
-      phone: item.phone,
+      phone: item.phone === "null" || item.phone == null ? "" : item.phone,
       address: item.address,
       role: item.role,
       image: null,
@@ -195,8 +195,8 @@ export default function Page() {
 
     try {
       const url = isEditing
-        ? `http://localhost:8000/api/users/${form.id}`
-        : "http://localhost:8000/api/users";
+        ? `${apiUrl}/api/users/${form.id}`
+        : `${apiUrl}/api/users`;
 
       const res = await fetch(url, {
         method: "POST",
@@ -228,7 +228,7 @@ export default function Page() {
         });
 
         // Refresh data
-        const updated = await fetch("http://localhost:8000/api/users", {
+        const updated = await fetch(`${apiUrl}/api/users`, {
           headers: { Authorization: `Bearer ${token}` },
         });
         const result = await updated.json();
@@ -253,16 +253,13 @@ export default function Page() {
   const handleDelete = async () => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(
-        `http://localhost:8000/api/users/${selectedItem.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const res = await fetch(`${apiUrl}/api/users/${selectedItem.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
       const dataRes = await res.json();
 
       if (res.ok) {
@@ -400,7 +397,11 @@ export default function Page() {
                             </TableCell>
                             <TableCell>{item.name}</TableCell>
                             <TableCell>{item.email}</TableCell>
-                            <TableCell>{item.phone}</TableCell>
+                            <TableCell>
+                              {item.phone === "null" || item.phone == null
+                                ? "-"
+                                : item.phone}
+                            </TableCell>
                             <TableCell>
                               <span
                                 className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -412,11 +413,10 @@ export default function Page() {
                                 {item.role}
                               </span>
                             </TableCell>
-                            <TableCell
-                              className="max-w-[200px] truncate"
-                              title={item.address}
-                            >
-                              {item.address}
+                            <TableCell>
+                              {item.address === "null" || item.address == null
+                                ? "-"
+                                : item.address}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -549,8 +549,13 @@ export default function Page() {
                     </div>
                     <div className="grid grid-cols-3 items-center">
                       <span className="font-semibold">Telepon:</span>
-                      <span className="col-span-2">{detailItem.phone}</span>
+                      <span className="col-span-2">
+                        {detailItem.phone === "null" || detailItem.phone == null
+                          ? "-"
+                          : detailItem.phone}
+                      </span>
                     </div>
+
                     <div className="grid grid-cols-3 items-center">
                       <span className="font-semibold">Role:</span>
                       <span className="col-span-2">
@@ -567,7 +572,12 @@ export default function Page() {
                     </div>
                     <div className="grid grid-cols-3 items-center">
                       <span className="font-semibold">Alamat:</span>
-                      <span className="col-span-2">{detailItem.address}</span>
+                      <span className="col-span-2">
+                        {detailItem.address === "null" ||
+                        detailItem.address == null
+                          ? "-"
+                          : detailItem.address}
+                      </span>
                     </div>
                   </div>
                 )}
@@ -597,7 +607,9 @@ export default function Page() {
                 </DialogHeader>
                 <div className="grid gap-4 py-4">
                   <div className="grid gap-2">
-                    <Label htmlFor="name">Nama<span className="text-red-500">*</span></Label> 
+                    <Label htmlFor="name">
+                      Nama<span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="name"
                       name="name"
@@ -613,7 +625,9 @@ export default function Page() {
                     )}
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="email">Email <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="email">
+                      Email <span className="text-red-500">*</span>
+                    </Label>
                     <Input
                       id="email"
                       name="email"
@@ -634,10 +648,9 @@ export default function Page() {
                     <Input
                       id="phone"
                       name="phone"
-                      value={form.phone}
+                      value={form.phone === "null" || form.phone == null ? "" : form.phone}
                       onChange={handleChange}
                       placeholder="Masukkan nomor telepon"
-                      required
                     />
                     {error?.phone && (
                       <p className="text-xs text-red-500 mt-1">
@@ -666,7 +679,9 @@ export default function Page() {
                   </div>
 
                   <div className="grid gap-2">
-                    <Label htmlFor="role">Role <span className="text-red-500">*</span></Label>
+                    <Label htmlFor="role">
+                      Role <span className="text-red-500">*</span>
+                    </Label>
                     <select
                       id="role"
                       name="role"
@@ -692,10 +707,9 @@ export default function Page() {
                     <Input
                       id="address"
                       name="address"
-                      value={form.address}
+                      value={form.address === "null" || form.address == null ? "" : form.address}
                       onChange={handleChange}
                       placeholder="Masukkan alamat"
-                      required
                     />
                     {error?.address && (
                       <p className="text-xs text-red-500 mt-1">
@@ -706,7 +720,9 @@ export default function Page() {
                   {!isEditing && (
                     <>
                       <div className="grid gap-2">
-                        <Label htmlFor="password">Password <span className="text-red-500">*</span></Label>
+                        <Label htmlFor="password">
+                          Password <span className="text-red-500">*</span>
+                        </Label>
                         <div className="relative">
                           <Input
                             id="password"
@@ -733,7 +749,8 @@ export default function Page() {
 
                       <div className="grid gap-2">
                         <Label htmlFor="confirmPassword">
-                          Konfirmasi Password <span className="text-red-500">*</span>
+                          Konfirmasi Password{" "}
+                          <span className="text-red-500">*</span>
                         </Label>
                         <div className="relative">
                           <Input

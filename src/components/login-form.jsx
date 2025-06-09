@@ -25,6 +25,7 @@ export function LoginForm({ className, ...props }) {
   };
 
   const [showPassword, setShowPassword] = useState(false);
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -32,11 +33,11 @@ export function LoginForm({ className, ...props }) {
 
     try {
       // Dapatkan CSRF token dari Sanctum
-      await fetch("http://127.0.0.1:8000/sanctum/csrf-cookie", {
+      await fetch(`${apiUrl}/sanctum/csrf-cookie`, {
         credentials: "include",
       });
 
-      const res = await fetch("http://127.0.0.1:8000/api/login", {
+      const res = await fetch(`${apiUrl}/api/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -97,15 +98,6 @@ export function LoginForm({ className, ...props }) {
                 />
               </div>
               <div className="grid gap-3">
-                <div className="flex items-center">
-                  <Label htmlFor="password">Password</Label>
-                  <a
-                    href="#"
-                    className="ml-auto text-sm underline-offset-2 hover:underline"
-                  >
-                    Lupa Password?
-                  </a>
-                </div>
                 <div className="relative">
                   <Input
                     id="password"
