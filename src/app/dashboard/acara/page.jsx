@@ -52,10 +52,48 @@ import {
     CardTitle } from "@/components/ui/card"
 import { Textarea } from "@/components/ui/textarea"
 import toast from "react-hot-toast";
+import { Editor } from "@tinymce/tinymce-react"
 
 
 export default function Page() {
-  const API_BASE_URL = "http://127.0.0.1:8000/api/acara"
+  // Add editor loading state
+  const [isEditorLoading, setIsEditorLoading] = useState(true);
+
+  // Add TinyMCE API key
+  const TINYMCE_API_KEY = '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f' // Replace with your actual API key
+
+  // const API_BASE_URL = "http://127.0.0.1:8000/api/acara"
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+  // Update editor config
+  const editorConfig = {
+    height: 300,
+    menubar: false,
+    branding: false,
+    statusbar: false,
+    plugins: [
+      'advlist', 'autolink', 'lists', 'link', 'charmap',
+      'anchor', 'searchreplace', 'visualblocks',
+      'insertdatetime', 'table', 'wordcount'
+    ],
+    toolbar: 'styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | removeformat',
+    toolbar_mode: 'sliding',
+    toolbar_sticky: true,
+    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 14px }',
+    style_formats: [
+      { title: 'Paragraph', format: 'p' },
+      { title: 'Heading 1', format: 'h1' },
+      { title: 'Heading 2', format: 'h2' },
+      { title: 'Heading 3', format: 'h3' }
+    ],
+    style_formats_merge: false,
+    style_formats_autohide: true,
+    setup: (editor) => {
+      editor.on('init', () => {
+        setIsEditorLoading(false);
+      });
+    }
+  }
 
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
@@ -97,7 +135,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/acara`, {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
@@ -130,7 +168,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/acara/${id}`, {
         headers: {
           "Content-Type": "application/json",
           "Accept": "application/json",
@@ -167,7 +205,7 @@ export default function Page() {
         formDataToSend.append('gambar', eventData.gambar)
       }
 
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/acara`, {
         method: "POST",
         headers: {
           "Accept": "application/json",
@@ -203,7 +241,7 @@ export default function Page() {
         formDataToSend.append('gambar', eventData.gambar)
       }
 
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/acara/${id}`, {
         method: "POST", // Keep as POST for FormData
         headers: {
           "Accept": "application/json",
@@ -232,7 +270,7 @@ export default function Page() {
     setIsLoading(true)
     try {
       const token = localStorage.getItem("token")
-      const response = await fetch(`${API_BASE_URL}/${id}`, {
+      const response = await fetch(`${apiUrl}/api/acara/${id}`, {
         method: "DELETE",
         headers: {
           "Content-Type": "application/json",
@@ -359,6 +397,14 @@ export default function Page() {
     }
   };
 
+  // Add handleEditorChange function
+  const handleEditorChange = (content) => {
+    setFormData(prev => ({
+      ...prev,
+      deskripsi: content
+    }));
+  };
+
   const handleFormSubmit = () => {
     if (!formData.nama_acara) {
       toast.error("Nama acara wajib diisi");
@@ -407,6 +453,12 @@ export default function Page() {
     setDetailItem(item)
     setIsDetailModalOpen(true)
   }
+
+  // Add new function near other handlers
+  const handleDescriptionClick = (item) => {
+    setDetailItem(item);
+    setIsDetailModalOpen(true);
+  };
 
   // Fixed checkDuplicateName function
   const checkDuplicateName = (nama) => {
@@ -534,10 +586,19 @@ export default function Page() {
                                 )}
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-900">{item.nama_acara}</td>
-                              <td className="px-4 py-3 text-sm text-gray-900 truncate max-w-xs">
-                                {item.deskripsi && item.deskripsi.length > 70 
-                                  ? `${item.deskripsi.substring(0, 70)}...` 
-                                  : item.deskripsi || '-'}
+                              <td 
+                                className="px-4 py-3 text-sm text-gray-900 truncate max-w-xs cursor-pointer hover:bg-gray-100"
+                                onClick={() => handleDescriptionClick(item)}
+                                title="Klik untuk melihat deskripsi lengkap"
+                              >
+                                <div 
+                                  dangerouslySetInnerHTML={{ 
+                                    __html: item.deskripsi && item.deskripsi.length > 70 
+                                      ? `${item.deskripsi.substring(0, 70)}...` 
+                                      : item.deskripsi || '-'
+                                  }}
+                                  className="prose prose-sm max-w-none"
+                                />
                               </td>
                               <td className="px-4 py-3 text-sm text-gray-900">
                                 {formatCurrency(item.harga)}
@@ -635,13 +696,24 @@ export default function Page() {
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="deskripsi">Deskripsi </Label>
-                        <Textarea
-                        id="deskripsi"
-                        name="deskripsi"
-                        value={formData.deskripsi}
-                        onChange={handleInputChange}
-                        placeholder="Isi deskripsi acara di sini..."
-                        />
+                        <div className="border rounded-md relative min-h-[300px]">
+                          {isEditorLoading && (
+                            <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
+                              <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                            </div>
+                          )}
+                          <Editor
+                            id="tinymce-editor"
+                            apiKey={TINYMCE_API_KEY}
+                            init={editorConfig}
+                            value={formData.deskripsi}
+                            onEditorChange={handleEditorChange}
+                            onInit={() => {
+                              // Reset loading state when editor is initialized
+                              setIsEditorLoading(false);
+                            }}
+                          />
+                        </div>
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="harga">Harga <span className="text-red-500">*</span></Label>
@@ -679,36 +751,67 @@ export default function Page() {
                         )}
                     </div>
                     <div className="grid gap-2">
-                        <Label>Gambar</Label>
-                        <Input
-                          type="file"
-                          name="gambar"
-                          accept="image/jpeg,image/png,image/jpg"
-                          onChange={handleFileChange}
-                          disabled={isLoading}
-                        />
-                        <p className="text-xs text-gray-500">
-                          Format: JPEG, PNG, JPG (Max. 2MB)
-                        </p>
-                        {formData.gambar ? (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-500">File terpilih: {formData.gambar.name}</p>
-                            <img
-                              src={URL.createObjectURL(formData.gambar)}
-                              alt="Preview"
-                              className="mt-2 h-32 w-32 object-cover rounded-md"
-                            />
+                        <Label>Gambar {!isEditing && <span className="text-red-500">*</span>}</Label>
+                        {isEditing ? (
+                          <div className="space-y-4">
+                            {formData.gambar_url && (
+                              <div className="space-y-2">
+                                <p className="text-sm text-gray-500">Gambar saat ini:</p>
+                                <img
+                                  src={formData.gambar_url}
+                                  alt="Current"
+                                  className="h-32 w-32 object-cover rounded-md border"
+                                />
+                              </div>
+                            )}
+                            <div>
+                              <p className="text-sm text-gray-500 mb-2">Upload gambar baru (opsional):</p>
+                              <Input
+                                type="file"
+                                name="gambar"
+                                accept="image/jpeg,image/png,image/jpg"
+                                onChange={handleFileChange}
+                                disabled={isLoading}
+                              />
+                              <p className="text-xs text-gray-500 mt-1">
+                                Format: JPEG, PNG, JPG (Max. 2MB)
+                              </p>
+                              {formData.gambar && (
+                                <div className="mt-2">
+                                  <p className="text-sm text-gray-500">Preview gambar baru:</p>
+                                  <img
+                                    src={URL.createObjectURL(formData.gambar)}
+                                    alt="Preview"
+                                    className="mt-2 h-32 w-32 object-cover rounded-md border"
+                                  />
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        ) : formData.gambar_url ? (
-                          <div className="mt-2">
-                            <p className="text-sm text-gray-500">Gambar saat ini:</p>
-                            <img
-                              src={formData.gambar_url}
-                              alt="Current"
-                              className="mt-2 h-32 w-32 object-cover rounded-md"
+                        ) : (
+                          <div>
+                            <Input
+                              type="file"
+                              name="gambar"
+                              accept="image/jpeg,image/png,image/jpg"
+                              onChange={handleFileChange}
+                              disabled={isLoading}
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Format: JPEG, PNG, JPG (Max. 2MB)
+                            </p>
+                            {formData.gambar && (
+                              <div className="mt-2">
+                                <p className="text-sm text-gray-500">Preview:</p>
+                                <img
+                                  src={URL.createObjectURL(formData.gambar)}
+                                  alt="Preview"
+                                  className="mt-2 h-32 w-32 object-cover rounded-md border"
+                                />
+                              </div>
+                            )}
                           </div>
-                        ) : null}
+                        )}
                     </div>
                     <div className="grid gap-2">
                         <Label htmlFor="status">Status <span className="text-red-500">*</span></Label>
@@ -756,63 +859,67 @@ export default function Page() {
 
             {/* Modal Detail */}
             <Dialog open={isDetailModalOpen} onOpenChange={setIsDetailModalOpen}>
-              <DialogContent className="sm:max-w-md">
+              <DialogContent className="max-w-3xl"> {/* Changed from sm:max-w-md to max-w-3xl */}
                 <DialogHeader>
                   <DialogTitle>Detail Acara</DialogTitle>
                   <DialogDescription>Informasi lengkap data acara.</DialogDescription>
-                    </DialogHeader>
-                    <Separator />
-                     {detailItem && (
-                      <div className="space-y-3">
-                        <div className="grid grid-cols-3 gap-2">
-                          <p className="font-medium text-gray-500">Nama Acara:</p>
-                          <p className="col-span-2">{detailItem.nama_acara}</p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <p className="font-medium text-gray-500">Deskripsi:</p>
-                          <p className="col-span-2">{detailItem.deskripsi || '-'}</p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <p className="font-medium text-gray-500">Harga:</p>
-                          <p className="col-span-2 font-semibold text-green-600">
-                            {formatCurrency(detailItem.harga)}
-                          </p>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <p className="font-medium text-gray-500">Gambar:</p>
-                          <div className="col-span-2">
-                            {detailItem.gambar_url ? (
-                              <img 
-                                src={detailItem.gambar_url} 
-                                alt={detailItem.nama_acara}
-                                className="max-w-[200px] rounded-md"
-                                onError={(e) => {
-                                  console.log("Error loading detail image:", detailItem.gambar_url);
-                                  e.target.style.display = 'none';
-                                  const placeholder = document.createElement('p');
-                                  placeholder.className = 'text-gray-500';
-                                  placeholder.textContent = 'Gambar tidak dapat dimuat';
-                                  e.target.parentNode.appendChild(placeholder);
-                                }}
-                              />
-                            ) : (
-                              <p className="text-gray-500">Tidak ada gambar</p>
-                            )}
-                          </div>
-                        </div>
-                        <div className="grid grid-cols-3 gap-2">
-                          <p className="font-medium text-gray-500">Status:</p>
-                          <div className="col-span-2">
-                            <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
-                              detailItem.status === 'tersedia' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
-                            }`}>
-                              {detailItem.status === 'tersedia' ? 'Tersedia' : 'Tidak Tersedia'}
-                            </span>
-                          </div>
-                        </div>
+                </DialogHeader>
+                <Separator />
+                {detailItem && (
+                  <div className="space-y-4"> {/* Increased spacing */}
+                    <div className="grid grid-cols-5 gap-4"> {/* Changed from grid-cols-3 to grid-cols-5 for better layout */}
+                      <p className="font-medium text-gray-500">Nama Acara:</p>
+                      <p className="col-span-4">{detailItem.nama_acara}</p>
+                    </div>
+                    <div className="grid grid-cols-5 gap-4">
+                      <p className="font-medium text-gray-500">Deskripsi:</p>
+                      <div 
+                        className="col-span-4 prose prose-sm max-w-none h-auto overflow-y-auto"
+                        dangerouslySetInnerHTML={{ 
+                          __html: detailItem.deskripsi || '-'
+                        }}
+                      />
+                    </div>
+                    <div className="grid grid-cols-5 gap-4">
+                      <p className="font-medium text-gray-500">Harga:</p>
+                      <p className="col-span-4 font-semibold text-green-600">
+                        {formatCurrency(detailItem.harga)}
+                      </p>
+                    </div>
+                    <div className="grid grid-cols-5 gap-4">
+                      <p className="font-medium text-gray-500">Gambar:</p>
+                      <div className="col-span-4">
+                        {detailItem.gambar_url ? (
+                          <img 
+                            src={detailItem.gambar_url} 
+                            alt={detailItem.nama_acara}
+                            className="max-h-[300px] object-contain rounded-md" // Updated image sizing
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              const placeholder = document.createElement('p');
+                              placeholder.className = 'text-gray-500';
+                              placeholder.textContent = 'Gambar tidak dapat dimuat';
+                              e.target.parentNode.appendChild(placeholder);
+                            }}
+                          />
+                        ) : (
+                          <p className="text-gray-500">Tidak ada gambar</p>
+                        )}
                       </div>
-                    )}
-                </DialogContent>
+                    </div>
+                    <div className="grid grid-cols-5 gap-4">
+                      <p className="font-medium text-gray-500">Status:</p>
+                      <div className="col-span-4">
+                        <span className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
+                          detailItem.status === 'tersedia' ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'
+                        }`}>
+                          {detailItem.status === 'tersedia' ? 'Tersedia' : 'Tidak Tersedia'}
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </DialogContent>
             </Dialog>
           </div>
         </main>
