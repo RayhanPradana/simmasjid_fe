@@ -534,41 +534,6 @@ export default function Page() {
     }
   }
 
-// ⬇️ Taruh di luar useEffect (sebelum return atau sebelum useEffect)
-const fetchPayments = async () => {
-  try {
-    const token = localStorage.getItem("token");
-    const response = await fetch("http://127.0.0.1:8000/api/pembayaran", {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error(`HTTP error ${response.status}`);
-    }
-
-    const data = await response.json();
-    setPayments(data);
-    setFilteredPayments(data);
-  } catch (error) {
-    console.error("Gagal mengambil data pembayaran:", error);
-  }
-};
-
-// ⬇️ useEffect-nya tetap seperti ini
-useEffect(() => {
-  if (isLoggedIn) {
-    fetchPayments();
-  }
-}, [isLoggedIn]);
-
-
-
-
-
   // Handle tab change
   const handleTabChange = (value) => {
     setCurrentTab(value)
