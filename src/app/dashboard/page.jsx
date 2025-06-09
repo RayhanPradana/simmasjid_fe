@@ -39,7 +39,7 @@ import { useRouter } from "next/navigation";
 
 export default function Page() {
   const router = useRouter();
-  const API_BASE_URL = "http://127.0.0.1:8000/api/dashboard";
+  // const API_BASE_URL = "http://127.0.0.1:8000/api/dashboard";
   const { toast } = useToast();
   const [error, setError] = useState(null);
   const isLoggedIn = useAuthRedirect();
@@ -71,19 +71,18 @@ export default function Page() {
         total: 0,
       },
       pembayaran: {
-        belumLunas: 0,
-        belumDilihat: 0,
-        total: 0,
+        belumLunas: 0
       },
       reservasi: {
         pending: 0,
         disetujui: 0,
-        belumLunas: 0,
-        menungguKonfirmasi: 0,
-        total: 0,
+        menungguLunas: 0, 
+        sedangBerlangsung: 0,
       },
     },
   });
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   useEffect(() => {
     fetchDashboardData();
@@ -95,7 +94,7 @@ export default function Page() {
       const token = localStorage.getItem("token");
       if (!token) throw new Error("No authentication token found");
 
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/dashboard`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -171,34 +170,23 @@ export default function Page() {
             // Removed aktif and terbaru status
           },
           pembayaran: {
-            belumLunas:
-              result.data.pembayaran?.filter(
-                (p) => p.status === "belum_lunas"
-              ).length || 0,
-            belumDilihat:
-              result.data.pembayaran?.filter(
-                (p) => !p.dilihat_admin && p.status === "menunggu_konfirmasi"
-              ).length || 0,
-            total: result.data.pembayaran?.length || 0,
+            belumLunas: result.data.pembayaran?.filter(
+              (p) => p.status === "belum lunas"
+            ).length || 0
           },
           reservasi: {
-            pending:
-              result.data.reservasi_fasilitas?.filter(
-                (r) => r.status === "pending"
-              ).length || 0,
-            disetujui:
-              result.data.reservasi_fasilitas?.filter(
-                (r) => r.status === "disetujui"
-              ).length || 0,
-            belumLunas:
-              result.data.reservasi_fasilitas?.filter(
-                (r) => r.status_pembayaran === "menunggu lunas"
-              ).length || 0,
-            menungguKonfirmasi:
-              result.data.reservasi_fasilitas?.filter(
-                (r) => r.status_pembayaran === "sedang berlangsung"
-              ).length || 0,
-            total: result.data.reservasi_fasilitas?.length || 0,
+            pending: result.data.reservasi_fasilitas?.filter(
+              (r) => r.status_reservasi === "pending"
+            ).length || 0,
+            disetujui: result.data.reservasi_fasilitas?.filter(
+              (r) => r.status_reservasi === "disetujui" 
+            ).length || 0,
+            menungguLunas: result.data.reservasi_fasilitas?.filter(
+              (r) => r.status_reservasi === "menunggu lunas" 
+            ).length || 0,
+            sedangBerlangsung: result.data.reservasi_fasilitas?.filter(
+              (r) => r.status_reservasi === "sedang berlangsung"
+            ).length || 0,
           },
         },
       }));
@@ -215,14 +203,6 @@ export default function Page() {
     } finally {
       setIsLoading(false);
     }
-  };
-
-  const formatRupiah = (amount) => {
-    const formatter = new Intl.NumberFormat('id-ID', {
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    });
-    return `Rp ${formatter.format(amount)}`;
   };
 
   const formatCompactRupiah = (amount) => {
@@ -333,13 +313,13 @@ export default function Page() {
             </div>
           </div>
 
-          {/* Dashboard Grid - Optimized Layout */}
+          {/* Dashboard Grid - Responsive Layout */}
           <div className="p-3 h-[calc(100%-5rem)]">
-            <div className="grid grid-cols-6 grid-rows-3 gap-3 h-full">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-3 h-full">
 
               {/* Row 1: Key Metrics */}
               <motion.div
-                className="col-span-2 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
+                className="col-span-1 sm:col-span-1 lg:col-span-2 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNavigation('/dashboard/user')}
               >
@@ -358,7 +338,7 @@ export default function Page() {
               </motion.div>
 
               <motion.div
-                className="col-span-2 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
+                className="col-span-1 sm:col-span-1 lg:col-span-2 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNavigation('/dashboard/jadwal-kegiatan')}
               >
@@ -377,7 +357,7 @@ export default function Page() {
               </motion.div>
 
               <motion.div
-                className="col-span-2 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
+                className="col-span-1 sm:col-span-2 lg:col-span-2 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNavigation('/dashboard/berita')}
               >
@@ -397,7 +377,7 @@ export default function Page() {
 
               {/* Row 2: Finance */}
               <motion.div
-                className="col-span-6 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
+                className="col-span-1 sm:col-span-2 lg:col-span-6 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNavigation('/dashboard/keuangan')}
               >
@@ -405,7 +385,7 @@ export default function Page() {
                   <Wallet className="h-4 w-4" />
                   Keuangan
                 </h3>
-                <div className="grid grid-cols-3 gap-3 mb-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-3">
                   <div className="text-center p-2 bg-blue-50 rounded-lg">
                     <div className="flex items-center justify-center mb-1">
                       <Wallet className="h-4 w-4 text-blue-600" />
@@ -434,24 +414,11 @@ export default function Page() {
                     <div className="text-xs text-gray-500">Total Keluar</div>
                   </div>
                 </div>
-                {/* Income Types Breakdown */}
-                <div className="grid grid-cols-4 gap-1 text-xs">
-                  {dashboardData.display.keuangan.breakdown && Object.entries(dashboardData.display.keuangan.breakdown).map(([type, amount], index) => (
-                    <div key={type} className={`text-center p-1 rounded ${index % 4 === 0 ? 'bg-emerald-50 text-emerald-700' :
-                      index % 4 === 1 ? 'bg-teal-50 text-teal-700' :
-                        index % 4 === 2 ? 'bg-cyan-50 text-cyan-700' :
-                          'bg-sky-50 text-sky-700'
-                      }`}>
-                      <div className="font-semibold">{formatCompactRupiah(amount)}</div>
-                      <div className="capitalize text-[10px]">{type}</div>
-                    </div>
-                  ))}
-                </div>
               </motion.div>
 
               {/* Row 3: Status Boxes */}
               <motion.div
-                className="col-span-3 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
+                className="col-span-1 sm:col-span-2 lg:col-span-3 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNavigation('/dashboard/pembayaran')}
               >
@@ -459,30 +426,16 @@ export default function Page() {
                   <CreditCard className="h-4 w-4" />
                   Status Pembayaran
                 </h3>
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="text-center p-2 bg-red-50 rounded-lg">
-                    <div className="text-lg font-bold text-red-600">
-                      {dashboardData.display.pembayaran.belumLunas}
-                    </div>
-                    <div className="text-xs text-gray-500">Belum Lunas</div>
+                <div className="text-center p-4 bg-red-50 rounded-lg">
+                  <div className="text-2xl font-bold text-red-600">
+                    {dashboardData.display.pembayaran.belumLunas}
                   </div>
-                  <div className="text-center p-2 bg-yellow-50 rounded-lg">
-                    <div className="text-lg font-bold text-yellow-600">
-                      {dashboardData.display.pembayaran.belumDilihat}
-                    </div>
-                    <div className="text-xs text-gray-500">Belum Dilihat</div>
-                  </div>
-                  <div className="text-center p-2 bg-gray-50 rounded-lg">
-                    <div className="text-lg font-bold text-gray-600">
-                      {dashboardData.display.pembayaran.total}
-                    </div>
-                    <div className="text-xs text-gray-500">Total</div>
-                  </div>
+                  <div className="text-sm text-gray-500">Pembayaran Belum Lunas</div>
                 </div>
               </motion.div>
 
               <motion.div
-                className="col-span-3 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
+                className="col-span-1 sm:col-span-2 lg:col-span-3 bg-white rounded-lg shadow-sm p-3 cursor-pointer"
                 whileHover={{ scale: 1.02 }}
                 onClick={() => handleNavigation('/dashboard/reservasi-fasilitas')}
               >
@@ -490,7 +443,7 @@ export default function Page() {
                   <Clock className="h-4 w-4" />
                   Status Reservasi
                 </h3>
-                <div className="grid grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
                   <div className="text-center p-2 bg-yellow-50 rounded-lg">
                     <div className="text-sm font-bold text-yellow-600">
                       {dashboardData.display.reservasi.pending}
@@ -505,15 +458,15 @@ export default function Page() {
                   </div>
                   <div className="text-center p-2 bg-red-50 rounded-lg">
                     <div className="text-sm font-bold text-red-600">
-                      {dashboardData.display.reservasi.belumLunas}
+                      {dashboardData.display.reservasi.menungguLunas}
                     </div>
-                    <div className="text-xs text-gray-500">Belum Lunas</div>
+                    <div className="text-xs text-gray-500">Menunggu Lunas</div>
                   </div>
                   <div className="text-center p-2 bg-blue-50 rounded-lg">
                     <div className="text-sm font-bold text-blue-600">
-                      {dashboardData.display.reservasi.menungguKonfirmasi}
+                      {dashboardData.display.reservasi.sedangBerlangsung}
                     </div>
-                    <div className="text-xs text-gray-500">Menunggu</div>
+                    <div className="text-xs text-gray-500">Sedang Berlangsung</div>
                   </div>
                 </div>
               </motion.div>

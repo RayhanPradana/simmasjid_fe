@@ -55,9 +55,11 @@ import {
 import toast from "react-hot-toast";
 import { TrendingDown, TrendingUp, Wallet } from "lucide-react";
 import { handleCetak } from "@/components/handleCetak";
+import { Editor } from "@tinymce/tinymce-react"
 
 export default function Page() {
-  const API_BASE_URL = "http://127.0.0.1:8000/api/keuangan";
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
 
   const [data, setData] = useState([]);
   const [filteredData, setFilteredData] = useState([]);
@@ -78,22 +80,28 @@ export default function Page() {
 
   const filterActive = ["mingguan", "bulanan", "tahunan"].includes(filterType);
 
+  // Add editor loading state
+  const [isEditorLoading, setIsEditorLoading] = useState(true);
+
+  // Add TinyMCE API key
+  const TINYMCE_API_KEY = '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f' // Replace with your actual API key
+
   //const [isLoading, setIsLoading] = useState(true);
   const [formData, setFormData] = useState({
-    tanggal: getCurrentFormattedDate(),
+    tanggal: "",
     jenis: "",
     deskripsi: "",
     total_masuk: "",
     total_keluar: "",
   });
 
-  function getCurrentFormattedDate() {
-    const now = new Date();
-    const year = now.getFullYear();
-    const month = String(now.getMonth() + 1).padStart(2, "0");
-    const day = String(now.getDate()).padStart(2, "0");
-    return `${year}-${month}-${day}`;
-  }
+  // function getCurrentFormattedDate() {
+  //   const now = new Date();
+  //   const year = now.getFullYear();
+  //   const month = String(now.getMonth() + 1).padStart(2, "0");
+  //   const day = String(now.getDate()).padStart(2, "0");
+  //   return `${year}-${month}-${day}`;
+  // }
 
   // Format currency with preserved zeros
   function formatCurrency(amount) {
@@ -110,6 +118,7 @@ export default function Page() {
     })}`;
   }
 
+
   // Fetch data on component mount
   useEffect(() => {
     fetchData();
@@ -117,16 +126,18 @@ export default function Page() {
 
   // Filter data based on search term
   useEffect(() => {
-    const filtered = data.filter(
-      (item) =>
-        item.jenis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        item.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (item.total_masuk &&
-          item.total_masuk.toString().includes(searchTerm)) ||
-        (item.total_keluar &&
-          item.total_keluar.toString().includes(searchTerm)) ||
-        item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filtered = data
+      .filter(
+        (item) =>
+          item.jenis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          item.deskripsi?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          (item.total_masuk &&
+            item.total_masuk.toString().includes(searchTerm)) ||
+          (item.total_keluar &&
+            item.total_keluar.toString().includes(searchTerm)) ||
+          item.tanggal?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
+      .sort((a, b) => b.id - a.id); // Tambahkan pengurutan di sini
     setFilteredData(filtered);
     setCurrentPage(1);
   }, [searchTerm, data]);
@@ -137,7 +148,7 @@ export default function Page() {
         setIsLoading(true);
         const token = localStorage.getItem("token");
 
-        let url = "http://localhost:8000/api/keuangan-laporan";
+        let url = `${apiUrl}/api/keuangan-laporan`;
         const params = [];
 
         if (filterType !== "all") {
@@ -164,7 +175,9 @@ export default function Page() {
         }
 
         const json = await response.json();
-        setData(json.data);
+        // Urutkan data berdasarkan ID secara descending
+        const sortedData = json.data.sort((a, b) => b.id - a.id);
+        setData(sortedData);
       } catch (error) {
         console.error("Error fetching data:", error);
       } finally {
@@ -201,7 +214,7 @@ export default function Page() {
     setIsLoading(true);
     try {
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/keuangan`, {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
@@ -214,8 +227,10 @@ export default function Page() {
         throw new Error("Network response was not ok");
       }
       const result = await response.json();
-      setData(result.data || result);
-      setFilteredData(result.data || result);
+      // Urutkan data berdasarkan ID secara descending (terbaru di atas)
+      const sortedData = (result.data || result).sort((a, b) => b.id - a.id);
+      setData(sortedData);
+      setFilteredData(sortedData);
     } catch (error) {
       console.error("Gagal memuat data:", error);
       toast.error("Gagal memuat data. Silakan coba lagi.");
@@ -248,7 +263,7 @@ export default function Page() {
       };
 
       const token = localStorage.getItem("token");
-      const response = await fetch(`${API_BASE_URL}`, {
+      const response = await fetch(`${apiUrl}/api/keuangan`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -300,7 +315,7 @@ export default function Page() {
 
   const handleAddNew = () => {
     setFormData({
-      tanggal: getCurrentFormattedDate(),
+      tanggal: "",
       jenis: "",
       deskripsi: "",
       total_masuk: "",
@@ -368,6 +383,44 @@ export default function Page() {
     setDetailItem(item);
     setIsDetailModalOpen(true);
   };
+
+  // Add handleEditorChange function
+  const handleEditorChange = (content) => {
+    setFormData(prev => ({
+      ...prev,
+      deskripsi: content
+    }));
+  };
+
+  // Update editor config
+  const editorConfig = {
+    height: 300,
+    menubar: false,
+    branding: false,
+    statusbar: false,
+    plugins: [
+      'advlist', 'autolink', 'lists', 'link', 'charmap',
+      'anchor', 'searchreplace', 'visualblocks',
+      'insertdatetime', 'table', 'wordcount'
+    ],
+    toolbar: 'styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | removeformat',
+    toolbar_mode: 'sliding',
+    toolbar_sticky: true,
+    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 14px }',
+    style_formats: [
+      { title: 'Paragraph', format: 'p' },
+      { title: 'Heading 1', format: 'h1' },
+      { title: 'Heading 2', format: 'h2' },
+      { title: 'Heading 3', format: 'h3' }
+    ],
+    style_formats_merge: false,
+    style_formats_autohide: true,
+    setup: (editor) => {
+      editor.on('init', () => {
+        setIsEditorLoading(false);
+      });
+    }
+  }
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
@@ -622,7 +675,15 @@ export default function Page() {
                               className="max-w-[200px] truncate"
                               title={item.deskripsi}
                             >
-                              {item.deskripsi || "-"}
+                              {item.deskripsi ? (
+                                <div dangerouslySetInnerHTML={{
+                                  __html: item.deskripsi
+                                    .replace(/<\/?p>/g, '')
+                                    .replace(/<\/?strong>/g, '<b>')
+                                    .replace(/<\/?em>/g, '<i>')
+                                    .replace(/<\/?u>/g, '<u>')
+                                }} />
+                              ) : "-"}
                             </TableCell>
                             <TableCell className="text-right">
                               <div className="flex justify-end gap-2">
@@ -752,7 +813,15 @@ export default function Page() {
                     <div className="grid grid-cols-3 items-start">
                       <span className="font-semibold">Deskripsi:</span>
                       <span className="col-span-2">
-                        {detailItem.deskripsi || "-"}
+                        {detailItem.deskripsi ? (
+                          <div dangerouslySetInnerHTML={{
+                            __html: detailItem.deskripsi
+                              .replace(/<\/?p>/g, '')
+                              .replace(/<\/?strong>/g, '<b>')
+                              .replace(/<\/?em>/g, '<i>')
+                              .replace(/<\/?u>/g, '<u>')
+                          }} />
+                        ) : "-"}
                       </span>
                     </div>
                   </div>
@@ -781,52 +850,46 @@ export default function Page() {
                 {/* Transaction Type Tabs */}
                 <div className="flex justify-center space-x-4 mb-4">
                   <div
-                    className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${
-                      transactionType === "pemasukan"
+                    className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${transactionType === "pemasukan"
                         ? "bg-blue-100 text-blue-600"
                         : "bg-gray-100 text-gray-600"
-                    }`}
+                      }`}
                     onClick={() => handleTransactionTypeChange("pemasukan")}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        transactionType === "pemasukan"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${transactionType === "pemasukan"
                           ? "bg-white shadow-sm"
                           : "bg-gray-200"
-                      }`}
+                        }`}
                     >
                       <ArrowUpCircle
-                        className={`h-4 w-4 ${
-                          transactionType === "pemasukan"
+                        className={`h-4 w-4 ${transactionType === "pemasukan"
                             ? "text-blue-600"
                             : "text-gray-500"
-                        }`}
+                          }`}
                       />
                     </div>
                     <span className="text-sm font-medium">Pemasukan</span>
                   </div>
 
                   <div
-                    className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${
-                      transactionType === "pengeluaran"
+                    className={`flex items-center justify-center gap-2 p-2 cursor-pointer rounded-full w-32 transition-colors ${transactionType === "pengeluaran"
                         ? "bg-red-100 text-red-600"
                         : "bg-gray-100 text-gray-600"
-                    }`}
+                      }`}
                     onClick={() => handleTransactionTypeChange("pengeluaran")}
                   >
                     <div
-                      className={`w-6 h-6 rounded-full flex items-center justify-center ${
-                        transactionType === "pengeluaran"
+                      className={`w-6 h-6 rounded-full flex items-center justify-center ${transactionType === "pengeluaran"
                           ? "bg-white shadow-sm"
                           : "bg-gray-200"
-                      }`}
+                        }`}
                     >
                       <ArrowDownCircle
-                        className={`h-4 w-4 ${
-                          transactionType === "pengeluaran"
+                        className={`h-4 w-4 ${transactionType === "pengeluaran"
                             ? "text-red-600"
                             : "text-gray-500"
-                        }`}
+                          }`}
                       />
                     </div>
                     <span className="text-sm font-medium">Pengeluaran</span>
@@ -842,10 +905,12 @@ export default function Page() {
                       id="tanggal"
                       name="tanggal"
                       type="date"
-                      value={formData.tanggal || ""}
+                      value={formData.tanggal}
                       onChange={handleInputChange}
                       disabled={isLoading}
                       required
+                      placeholder="dd/mm/yyyy"
+                      className="placeholder:text-gray-400"
                     />
                   </div>
                   <div className="grid gap-2">
@@ -914,14 +979,24 @@ export default function Page() {
 
                   <div className="grid gap-2">
                     <Label htmlFor="deskripsi">Deskripsi</Label>
-                    <textarea
-                      id="deskripsi"
-                      name="deskripsi"
-                      value={formData.deskripsi}
-                      onChange={handleInputChange}
-                      placeholder="Masukkan deskripsi"
-                      className="min-h-[120px] flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                    />
+                    <div className="border rounded-md relative min-h-[300px]">
+                      {isEditorLoading && (
+                        <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                        </div>
+                      )}
+                      <Editor
+                        id="tinymce-editor"
+                        apiKey={TINYMCE_API_KEY}
+                        init={editorConfig}
+                        value={formData.deskripsi}
+                        onEditorChange={handleEditorChange}
+                        onInit={() => {
+                          // Reset loading state when editor is initialized
+                          setIsEditorLoading(false);
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
                 <DialogFooter>
