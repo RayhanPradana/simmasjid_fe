@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -62,6 +62,7 @@ import {
   CardTitle,
 } from "@/components/ui/card"
 import { toast } from "react-hot-toast";
+import { Editor } from "@tinymce/tinymce-react"
 
 export default function Page() {
   const API_BASE_URL = "http://127.0.0.1:8000/api/fasilitas"
@@ -86,7 +87,12 @@ export default function Page() {
   const [currentPage, setCurrentPage] = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [isDuplicateName, setIsDuplicateName] = useState(false)
+  const [isEditorLoading, setIsEditorLoading] = useState(true);
+  const [editorKey, setEditorKey] = useState(0);
+  const editorRef = useRef(null);
   const itemsPerPage = 5
+
+  const TINYMCE_API_KEY = '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f';
 
   // Reset form data function
   const resetFormData = () => {
@@ -440,6 +446,7 @@ export default function Page() {
     
     setIsEditing(true);
     setIsDuplicateName(false);
+    setEditorKey(prev => prev + 1); // Force re-render when editing
     setIsAddModalOpen(true);
   }
 
@@ -542,6 +549,61 @@ export default function Page() {
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber);
 
+  // Update editor config
+  const editorConfig = {
+    height: 300,
+    menubar: false,
+    branding: false,
+    statusbar: false,
+    plugins: [
+      'advlist', 'autolink', 'lists', 'link', 'charmap',
+      'anchor', 'searchreplace', 'visualblocks',
+      'insertdatetime', 'table', 'wordcount'
+    ],
+    toolbar: 'styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | removeformat',
+    toolbar_mode: 'sliding',
+    toolbar_sticky: true,
+    content_style: 'body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 14px }',
+    style_formats: [
+      { title: 'Paragraph', format: 'p' },
+      { title: 'Heading 1', format: 'h1' },
+      { title: 'Heading 2', format: 'h2' },
+      { title: 'Heading 3', format: 'h3' }
+    ],
+    style_formats_merge: false,
+    style_formats_autohide: true,
+    setup: (editor) => {
+      editorRef.current = editor;
+      editor.on('init', () => {
+        setIsEditorLoading(false);
+      });
+    },
+    init_instance_callback: (editor) => {
+      editor.setContent(formData.keterangan || '');
+      // Add error handling
+      editor.on('error', (e) => {
+        console.error('TinyMCE error:', e);
+        setEditorKey(prev => prev + 1);
+      });
+    }
+  };
+
+  // Add handleEditorChange
+  const handleEditorChange = (content) => {
+    setFormData(prev => ({
+      ...prev,
+      keterangan: content
+    }));
+  };
+
+  // Add useEffect for editor initialization
+  useEffect(() => {
+    if (isAddModalOpen) {
+      setEditorKey(prev => prev + 1);
+      setIsEditorLoading(true);
+    }
+  }, [isAddModalOpen]);
+
   return (
     <SidebarProvider>
       <AppSidebar />
@@ -642,7 +704,34 @@ export default function Page() {
                           )}
                         </div>
                         <div className="px-4 py-3 col-span-2 font-medium text-left">{item.nama_fasilitas}</div>
-                        <div className="px-4 py-3 col-span-3 text-gray-600 text-left truncate">{item.keterangan}</div>
+                        <div 
+                          className="px-4 py-3 col-span-3 text-gray-600 cursor-pointer hover:bg-gray-50"
+                          onClick={() => handleDetails(item)}
+                        >
+                          <div className="max-h-[100px] overflow-hidden relative">
+                            <div 
+                              className="prose prose-sm max-w-none"
+                              dangerouslySetInnerHTML={{ 
+                                __html: item.keterangan && item.keterangan.length > 150
+                                  ? `${item.keterangan.substring(0, 150)}...` 
+                                  : item.keterangan || '-'
+                              }}
+                            />
+                            {item.keterangan?.length > 150 && (
+                              <div className="absolute bottom-0 left-0 right-0 h-8 bg-gradient-to-t from-white to-transparent">
+                                <button 
+                                  className="text-xs text-blue-600 hover:text-blue-800 absolute bottom-0 left-0"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDetails(item);
+                                  }}
+                                >
+                                  Lihat selengkapnya
+                                </button>
+                              </div>
+                            )}
+                          </div>
+                        </div>
                         <div className="px-4 py-3 col-span-2 font-medium text-gray-700 text-left">{formatPrice(item.harga)}</div>
                         <div className="px-4 py-3 col-span-2">
                           <span className={`px-2 py-1 rounded-full text-xs font-medium border ${getStatusBadgeClass(item.status)}`}>
@@ -749,7 +838,12 @@ export default function Page() {
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <p className="font-medium text-gray-500">Keterangan:</p>
-                      <p className="col-span-2">{detailItem.keterangan}</p>
+                      <div 
+                        className="col-span-2 prose prose-sm max-w-none overflow-y-auto max-h-[400px]"
+                        dangerouslySetInnerHTML={{ 
+                          __html: detailItem.keterangan || '-'
+                        }}
+                      />
                     </div>
                     <div className="grid grid-cols-3 gap-2">
                       <p className="font-medium text-gray-500">Harga:</p>
@@ -840,15 +934,31 @@ export default function Page() {
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="keterangan">Keterangan</Label>
-                      <Textarea
-                        id="keterangan"
-                        name="keterangan"
-                        value={formData.keterangan}
-                        onChange={handleInputChange}
-                        placeholder="Tambahkan keterangan fasilitas (opsional)"
-                        rows={3}
-                        disabled={isLoading}
-                      />
+                      <div className="border rounded-md relative min-h-[300px]">
+                        {isEditorLoading && (
+                          <div className="absolute inset-0 bg-gray-50 flex items-center justify-center z-10">
+                            <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                          </div>
+                        )}
+                        {isAddModalOpen && (
+                          <Editor
+                            key={`editor-${editorKey}`}
+                            id={`tinymce-editor-${editorKey}`}
+                            apiKey={TINYMCE_API_KEY}
+                            init={editorConfig}
+                            value={formData.keterangan}
+                            onEditorChange={handleEditorChange}
+                            onInit={() => {
+                              setIsEditorLoading(false);
+                            }}
+                            onError={(e) => {
+                              console.error('Editor failed to load:', e);
+                              setIsEditorLoading(false);
+                              setEditorKey(prev => prev + 1);
+                            }}
+                          />
+                        )}
+                      </div>
                     </div>
                     <div className="grid gap-2">
                       <Label htmlFor="harga">Harga <span className="text-red-500">*</span></Label>
