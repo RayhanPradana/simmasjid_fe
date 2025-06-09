@@ -30,6 +30,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  Loader2,
   ChevronDown,
 } from "lucide-react";
 
@@ -63,9 +64,11 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { Editor } from "@tinymce/tinymce-react";
 
 export default function Page() {
   // Sample data untuk kegiatan
+  const [isEditorLoading, setIsEditorLoading] = useState(true);
   const [data, setData] = useState([]);
   const [error, setError] = useState({});
   const [filteredData, setFilteredData] = useState([]);
@@ -75,6 +78,59 @@ export default function Page() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+
+  // Add TinyMCE API key
+  const TINYMCE_API_KEY = "4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f"; // Replace with your actual API key
+
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+  // Update editor config
+  const editorConfig = {
+    height: 300,
+    menubar: false,
+    branding: false,
+    statusbar: false,
+    plugins: [
+      "advlist",
+      "autolink",
+      "lists",
+      "link",
+      "charmap",
+      "anchor",
+      "searchreplace",
+      "visualblocks",
+      "insertdatetime",
+      "table",
+      "wordcount",
+    ],
+    toolbar:
+      "styles | bold italic underline | alignleft aligncenter alignright | bullist numlist | removeformat",
+    toolbar_mode: "sliding",
+    toolbar_sticky: true,
+    content_style:
+      "body { font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen, Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif; font-size: 14px }",
+    style_formats: [
+      { title: "Paragraph", format: "p" },
+      { title: "Heading 1", format: "h1" },
+      { title: "Heading 2", format: "h2" },
+      { title: "Heading 3", format: "h3" },
+    ],
+    style_formats_merge: false,
+    style_formats_autohide: true,
+    setup: (editor) => {
+      editor.on("init", () => {
+        setIsEditorLoading(false);
+      });
+    },
+  };
+
+  // Add handleEditorChange function
+  const handleEditorChange = (content) => {
+    setFormData((prev) => ({
+      ...prev,
+      keterangan: content,
+    }));
+  };
 
   const [formData, setFormData] = useState({
     nama_kegiatan: "",
@@ -157,6 +213,11 @@ export default function Page() {
     setIsDetailModalOpen(true);
   };
 
+  const handleDescriptionClick = (item) => {
+    setDetailItem(item);
+    setIsDetailModalOpen(true);
+  };
+
   // Handle form submit
   const handleFormSubmit = async (e) => {
     e.preventDefault();
@@ -178,8 +239,8 @@ export default function Page() {
 
     try {
       const url = isEditing
-        ? `http://localhost:8000/api/jadwal/${formData.id}`
-        : "http://localhost:8000/api/jadwal";
+        ? `${apiUrl}/api/jadwal/${formData.id}`
+        : `${apiUrl}/api/jadwal`;
 
       const method = isEditing ? "POST" : "POST";
 
@@ -209,7 +270,7 @@ export default function Page() {
           status: "",
         });
         // refresh data
-        const updated = await fetch("http://localhost:8000/api/jadwal", {
+        const updated = await fetch(`${apiUrl}/api/jadwal`, {
           headers: {
             Authorization: `Bearer ${token}`,
           },
@@ -232,16 +293,13 @@ export default function Page() {
   const handleDelete = async () => {
     const token = localStorage.getItem("token");
     try {
-      const res = await fetch(
-        `http://localhost:8000/api/jadwal/${selectedItem.id}`,
-        {
-          method: "DELETE",
-          headers: {
-            Authorization: `Bearer ${token}`,
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      const res = await fetch(`${apiUrl}/api/jadwal/${selectedItem.id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${token}`,
+          "Content-Type": "application/json",
+        },
+      });
 
       const dataRes = await res.json();
 
@@ -274,7 +332,7 @@ export default function Page() {
     const fetchData = async () => {
       try {
         const token = localStorage.getItem("token");
-        const response = await fetch("http://127.0.0.1:8000/api/jadwal", {
+        const response = await fetch(`${apiUrl}/api/jadwal`, {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
@@ -444,9 +502,23 @@ export default function Page() {
                             <td className="px-4 py-3 text-sm text-gray-900">
                               {item.penanggung_jawab}
                             </td>
-                            <td className="px-4 py-3 text-sm text-gray-900">
-                              {item.keterangan}
+                            <td
+                              className="px-4 py-3 text-sm text-gray-900 truncate max-w-xs cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleDescriptionClick(item)}
+                              title="Klik untuk melihat keterangan lengkap"
+                            >
+                              {(() => {
+                                if (!item.keterangan) return "-";
+                                const tmp = document.createElement("DIV");
+                                tmp.innerHTML = item.keterangan;
+                                const text =
+                                  tmp.textContent || tmp.innerText || "";
+                                return text.length > 70
+                                  ? `${text.substring(0, 70)}...`
+                                  : text;
+                              })()}
                             </td>
+
                             <td className="px-4 py-3 text-sm text-gray-900">
                               <span
                                 className={`inline-flex items-center rounded-full px-2 py-1 text-xs font-medium ${
@@ -589,7 +661,11 @@ export default function Page() {
 
                     <div className="space-y-2">
                       <h4 className="text-sm font-medium">Keterangan:</h4>
-                      <p className="text-sm">{detailItem.keterangan}</p>
+                      <p className="text-sm"
+                        dangerouslySetInnerHTML={{ 
+                          __html: detailItem.keterangan || '-'
+                        }}
+                      />
                     </div>
                     <div className="flex justify-between items-center">
                       <div>
@@ -606,9 +682,6 @@ export default function Page() {
                             : "Draft"}
                         </span>
                       </div>
-                      <span className="text-sm text-gray-500">
-                        ID: {detailItem.id}
-                      </span>
                     </div>
                   </div>
                 )}
@@ -722,39 +795,59 @@ export default function Page() {
                   </div>
                   <div className="grid gap-2">
                     <Label htmlFor="keterangan">Keterangan</Label>
+                    <div className="border rounded-md relative min-h-[300px]">
+                      {isEditorLoading && (
+                        <div className="absolute inset-0 bg-gray-50 flex items-center justify-center">
+                          <Loader2 className="h-6 w-6 animate-spin text-gray-400" />
+                        </div>
+                      )}
+                      <Editor
+                        id="tinymce-editor"
+                        apiKey={TINYMCE_API_KEY}
+                        init={editorConfig}
+                        value={formData.keterangan}
+                        onEditorChange={handleEditorChange}
+                        onInit={() => {
+                          // Reset loading state when editor is initialized
+                          setIsEditorLoading(false);
+                        }}
+                      />
+                    </div>
+                  </div>
+                  {/* <div className="grid gap-2">
+                    <Label htmlFor="keterangan">Keterangan</Label>
                     <Input
                       id="keterangan"
                       name="keterangan"
                       value={formData.keterangan}
                       onChange={handleInputChange}
                       placeholder="Masukkan keterangan tambahan"
-                      required
                     />
                     {error?.keterangan && (
                       <p className="text-xs text-red-500 mt-1">
                         {error.keterangan[0]}
                       </p>
                     )}
-                  </div>
+                  </div> */}
                   <div className="grid gap-2">
-                      <Label htmlFor="status">Status</Label>
-                      <select
-                        id="status"
-                        name="status"
-                        value={formData.status}
-                        onChange={handleInputChange}
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                      >
-                        <option value="">Pilih Status</option>
-                        <option value="Draft">Draft</option>
-                        <option value="Publikasi">Publikasi</option>
-                      </select>
-                      {error?.status && (
-                        <p className="text-xs text-red-500 mt-1">
-                          {error.status[0]}
-                        </p>
-                      )}
-                    </div>
+                    <Label htmlFor="status">Status</Label>
+                    <select
+                      id="status"
+                      name="status"
+                      value={formData.status}
+                      onChange={handleInputChange}
+                      className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                    >
+                      <option value="">Pilih Status</option>
+                      <option value="Draft">Draft</option>
+                      <option value="Publikasi">Publikasi</option>
+                    </select>
+                    {error?.status && (
+                      <p className="text-xs text-red-500 mt-1">
+                        {error.status[0]}
+                      </p>
+                    )}
+                  </div>
                 </div>
                 <DialogFooter>
                   <Button
