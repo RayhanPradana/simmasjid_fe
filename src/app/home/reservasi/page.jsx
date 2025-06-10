@@ -1,6 +1,6 @@
 'use client';
 import { useState, useEffect } from 'react';
-import { Calendar } from '@/components/calendar';
+import { Calendar } from '@/components/Calendar';
 import { useRouter } from 'next/navigation';
 import { formatRupiah } from '@/utils/format';
 import { toast } from 'react-hot-toast';

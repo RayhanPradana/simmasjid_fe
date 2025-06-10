@@ -94,7 +94,7 @@ export default function Page() {
   const editorRef = useRef(null);
   const itemsPerPage = 5
 
-  const TINYMCE_API_KEY = '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f';
+  const TINYMCE_API_KEY = process.env.NEXT_PUBLIC_TINYMCE_API_KEY || '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f'; 
 
   // Reset form data function
   const resetFormData = () => {

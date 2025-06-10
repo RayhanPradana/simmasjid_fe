@@ -21,6 +21,9 @@ import {
 
 import { useRouter } from "next/navigation";
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+
 export function NavUser({ user }) {
   const { isMobile } = useSidebar();
   const router = useRouter();
@@ -52,7 +55,7 @@ export function NavUser({ user }) {
         return;
       }
 
-      const response = await fetch("http://localhost:8000/api/logout", {
+      const response = await fetch(`${apiUrl}/api/logout`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

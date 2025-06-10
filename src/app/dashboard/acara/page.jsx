@@ -60,7 +60,7 @@ export default function Page() {
   const [isEditorLoading, setIsEditorLoading] = useState(true);
 
   // Add TinyMCE API key
-  const TINYMCE_API_KEY = '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f' // Replace with your actual API key
+  const TINYMCE_API_KEY = process.env.NEXT_PUBLIC_TINYMCE_API_KEY || '4vf36i6pphb405aikdue5x3v9zo1ae5igdpehc3t8dcwni8f'; 
 
   // const API_BASE_URL = "http://127.0.0.1:8000/api/acara"
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";

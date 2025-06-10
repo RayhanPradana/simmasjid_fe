@@ -41,7 +41,7 @@ export function RegisterForm({ className, ...props }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    setError({});
 
     const formData = new FormData();
 
@@ -64,8 +64,17 @@ export function RegisterForm({ className, ...props }) {
       const res = await fetch(`${apiUrl}/api/register`, {
         method: "POST",
         credentials: "include",
+        headers: {
+          "Accept": "application/json",
+        },
         body: formData,
       });
+
+      // Check if response is JSON
+      const contentType = res.headers.get("content-type");
+      if (!contentType || !contentType.includes("application/json")) {
+        throw new Error("Server returned non-JSON response");
+      }
 
       const data = await res.json();
 
@@ -79,7 +88,9 @@ export function RegisterForm({ className, ...props }) {
       }
     } catch (err) {
       console.error(err);
-      setError("Gagal terhubung ke server.");
+      setError({
+        general: ["Gagal terhubung ke server. Silahkan coba lagi."],
+      });
     }
   };
 
