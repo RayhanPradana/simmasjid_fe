@@ -17,7 +17,7 @@ export function RegisterForm({ className, ...props }) {
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
-  const [error, setError] = useState({}); 
+  const [error, setError] = useState({});
 
   const [form, setForm] = useState({
     name: "",
@@ -43,7 +43,7 @@ export function RegisterForm({ className, ...props }) {
     e.preventDefault();
     setError(null);
 
-    const formData = new FormData(); 
+    const formData = new FormData();
 
     formData.append("name", form.name);
     formData.append("email", form.email);
@@ -73,7 +73,7 @@ export function RegisterForm({ className, ...props }) {
         toast.success("🎉 Registrasi berhasil! Silahkan Login.");
         router.push("/login");
       } else if (data.errors) {
-        setError(data.errors); 
+        setError(data.errors);
       } else {
         setError({ general: [data.message || "Registrasi gagal."] });
       }
@@ -104,10 +104,13 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3">
-                <Label htmlFor="name">Nama <span className="text-red-500">*</span></Label>
+                <Label htmlFor="name">
+                  Nama <span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="name"
                   type="text"
+                  placeholder="Masukkan Nama Anda"
                   value={form.name}
                   onChange={handleChange}
                   required
@@ -118,10 +121,13 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3">
-                <Label htmlFor="email">Email<span className="text-red-500">*</span></Label>
+                <Label htmlFor="email">
+                  Email<span className="text-red-500">*</span>
+                </Label>
                 <Input
                   id="email"
                   type="email"
+                  placeholder="Masukkan Email Anda"
                   value={form.email}
                   onChange={handleChange}
                   required
@@ -136,6 +142,7 @@ export function RegisterForm({ className, ...props }) {
                 <Input
                   id="phone"
                   type="text"
+                  placeholder="Masukkan No. Telepon Anda"
                   value={form.phone}
                   onChange={handleChange}
                 />
@@ -149,6 +156,7 @@ export function RegisterForm({ className, ...props }) {
                 <Input
                   id="address"
                   type="text"
+                  placeholder="Masukkan Alamat Anda"
                   value={form.address}
                   onChange={handleChange}
                 />
@@ -173,11 +181,14 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3 relative">
-                <Label htmlFor="password">Password<span className="text-red-500">*</span></Label>
+                <Label htmlFor="password">
+                  Password<span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    placeholder="Masukkan Password Anda"
                     value={form.password}
                     onChange={handleChange}
                     required
@@ -198,17 +209,21 @@ export function RegisterForm({ className, ...props }) {
               </div>
 
               <div className="grid gap-3 relative">
-                <Label htmlFor="confirmPassword">Konfirmasi Password<span className="text-red-500">*</span></Label>
+                <Label htmlFor="confirmPassword">
+                  Konfirmasi Password<span className="text-red-500">*</span>
+                </Label>
                 <div className="relative">
                   <Input
                     id="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Konfirmasi Password Anda"
                     value={form.confirmPassword}
                     onChange={handleChange}
                     required
                   />
                   {error?.password_confirmation && (
-                    <p className="text-xs text-red-500 mt-1">{error.password_confirmation[0]}
+                    <p className="text-xs text-red-500 mt-1">
+                      {error.password_confirmation[0]}
                     </p>
                   )}
                   <button

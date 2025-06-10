@@ -91,7 +91,7 @@ export function LoginForm({ className, ...props }) {
                 <Input
                   id="email"
                   type="email"
-                  placeholder="m@contoh.com"
+                  placeholder="Masukkan email"
                   value={form.email}
                   onChange={handleChange}
                   required
@@ -102,6 +102,7 @@ export function LoginForm({ className, ...props }) {
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
+                    placeholder="Masukkan password"
                     value={form.password}
                     onChange={handleChange}
                     required

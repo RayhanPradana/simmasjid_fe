@@ -82,6 +82,11 @@ import toast from "react-hot-toast"
 
 
 export default function Page() {
+  // Add new state for selected items
+  const [selectedReservations, setSelectedReservations] = useState([])
+  // Add new state for bulk update status
+  const [isBulkConfirmOpen, setIsBulkConfirmOpen] = useState(false)
+
   const [data, setData] = useState([])
   const [filteredData, setFilteredData] = useState([])
   const [searchTerm, setSearchTerm] = useState("")
@@ -282,16 +287,16 @@ export default function Page() {
         },
         body: JSON.stringify({ status: selectedStatus }),
       })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        toast.error(errorData.message || `Gagal mengubah status: ${response.status}`)
-        return false
+
+      if (response.ok) {
+        const result = await response.json()
+        toast.success(result.message || "Status reservasi berhasil diperbarui")
+        return true
       }
       
-      const result = await response.json()
-      toast.success(result.message || "Status reservasi berhasil diperbarui")
-      return true
+      const errorData = await response.json()
+      toast.error(errorData.message || `Gagal mengubah status: ${response.status}`)
+      return false
       
     } catch (error) {
       console.error("Failed to confirm reservation:", error)
@@ -450,39 +455,116 @@ export default function Page() {
     }
   }
 
-  // Update status otomatis (admin only)
-  const updateStatusOtomatis = async () => {
-    setIsLoading(true)
-    try {
-      const token = localStorage.getItem("token")
-      
-      const response = await fetch(`${apiUrl}/api/reservasi/update-status-otomatis`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Accept": "application/json",
-          "Authorization": `Bearer ${token}`,
-        },
-      })
-      
-      if (!response.ok) {
-        const errorData = await response.json()
-        toast.error(errorData.message || `Gagal memperbarui status: ${response.status}`)
-        return false
-      }
-      
-      const result = await response.json()
-      toast.success(result.message || "Status reservasi berhasil diperbarui secara otomatis")
-      return true
-      
-    } catch (error) {
-      console.error("Failed to update status automatically:", error)
-      toast.error("Gagal memperbarui status secara otomatis")
-      return false
-    } finally {
-      setIsLoading(false)
-    }
+  // Add this helper function to check if time is between two times
+  const isTimeBetween = (currentTime, startTime, endTime) => {
+    const [currentHour, currentMinute] = currentTime.split(':').map(Number);
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+
+    const current = currentHour * 60 + currentMinute;
+    const start = startHour * 60 + startMinute;
+    const end = endHour * 60 + endMinute;
+
+    return current >= start && current <= end;
   }
+
+  // Update status otomatis
+  const updateStatusOtomatis = async () => {
+    try {
+      const token = localStorage.getItem("token");
+      const now = new Date();
+      const currentTime = now.getHours().toString().padStart(2, '0') + ':' + 
+                         now.getMinutes().toString().padStart(2, '0');
+      const currentDate = now.toISOString().split('T')[0];
+      
+      const response = await fetch(`${apiUrl}/api/reservasi`, {
+        headers: {
+          "Authorization": `Bearer ${token}`,
+          "Accept": "application/json",
+        }
+      });
+      
+      if (!response.ok) throw new Error('Failed to fetch reservations');
+      const reservations = await response.json();
+
+      let statusChanged = false;
+
+      // Process each reservation
+      for (const reservation of reservations) {
+        // Only process reservations for today that are approved or in progress
+        if (reservation.tgl_reservasi === currentDate && 
+            ['disetujui', 'siap digunakan', 'sedang berlangsung'].includes(reservation.status_reservasi)) {
+          
+          let newStatus = reservation.status_reservasi;
+          let shouldUpdate = false;
+
+          // Check all sessions
+          for (const session of reservation.sesi) {
+            const isCurrentlyOngoing = isTimeBetween(currentTime, session.jam_mulai, session.jam_selesai);
+            const [sessionEndHour, sessionEndMin] = session.jam_selesai.split(':').map(Number);
+            const sessionEndTime = sessionEndHour * 60 + sessionEndMin;
+            const currentTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
+            if (isCurrentlyOngoing && newStatus !== 'sedang berlangsung') {
+              newStatus = 'sedang berlangsung';
+              shouldUpdate = true;
+              break;
+            } else if (currentTotalMinutes > sessionEndTime && 
+                      newStatus !== 'selesai' && 
+                      reservation.status_reservasi === 'sedang berlangsung') {
+              newStatus = 'selesai';
+              shouldUpdate = true;
+            }
+          }
+
+          // Update status if needed
+          if (shouldUpdate) {
+            const updateResponse = await fetch(`${apiUrl}/api/reservasi/confirm/${reservation.id}`, {
+              method: 'POST',
+              headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${token}`,
+                "Accept": "application/json",
+              },
+              body: JSON.stringify({ status: newStatus })
+            });
+
+            if (updateResponse.ok) {
+              statusChanged = true;
+            }
+          }
+        }
+      }
+
+      // Only refresh and show notification if any status was changed
+      if (statusChanged) {
+        fetchReservations();
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error updating status:', error);
+      return false;
+    }
+  };
+
+  // Add this useEffect for automatic status updates
+  useEffect(() => {
+    // Run status check every minute
+    const statusInterval = setInterval(async () => {
+      if (currentUser?.role === 'admin') {
+        await updateStatusOtomatis();
+      }
+    }, 60000); // Check every minute
+
+    // Initial check on component mount
+    if (currentUser?.role === 'admin') {
+      updateStatusOtomatis();
+    }
+
+    // Cleanup interval on unmount
+    return () => clearInterval(statusInterval);
+  }, [currentUser]);
 
   {/* Add this handler function in your component */}
   const handleUpdateStatusOtomatis = async () => {
@@ -767,7 +849,7 @@ export default function Page() {
       case 'sedang berlangsung':
         return 'bg-blue-100 text-blue-800 border-blue-200'
       case 'dibatalkan':
-        return 'bg-gray-100 text-gray-800 border-gray-200'
+        return 'bg-red-100 text-red-800 border-red-200'
       case 'selesai':
         return 'bg-purple-100 text-purple-800 border-purple-200'
       default:
@@ -801,6 +883,8 @@ export default function Page() {
   // Check if user can edit/delete/confirm reservation
   const canEditReservation = (item) => {
     if (!currentUser) return false
+    // Don't allow editing if status is selesai or dibatalkan
+    if (item.status_reservasi === 'selesai' || item.status_reservasi === 'dibatalkan') return false
     return currentUser.role === 'admin' || currentUser.id === item.user_id
   }
 
@@ -811,6 +895,8 @@ export default function Page() {
 
   const canConfirmReservation = (item) => {
     if (!currentUser || currentUser.role !== 'admin') return false
+    // Don't allow confirmation if status is selesai or dibatalkan
+    if (item.status_reservasi === 'selesai' || item.status_reservasi === 'dibatalkan') return false
     // Only allow confirmation for specific status transitions
     const allowedStatuses = ['pending', 'disetujui', 'menunggu lunas', 'siap digunakan', 'sedang berlangsung']
     return allowedStatuses.includes(item.status_reservasi)
@@ -829,6 +915,75 @@ export default function Page() {
   const totalPages = Math.ceil(filteredData.length / itemsPerPage)
 
   const paginate = (pageNumber) => setCurrentPage(pageNumber)
+
+  // Add new handler for bulk selection
+  const handleSelectReservation = (id) => {
+    // Find the item by id
+    const item = currentItems.find(item => item.id === id)
+    // Don't allow selection if status is selesai or dibatalkan
+    if (item.status_reservasi === 'selesai' || item.status_reservasi === 'dibatalkan') {
+      return
+    }
+
+    setSelectedReservations(prev => {
+      if (prev.includes(id)) {
+        return prev.filter(item => item !== id)
+      }
+      return [...prev, id]
+    })
+  }
+
+  // Add new handler for select all
+  const handleSelectAll = () => {
+    // Filter out items with status selesai or dibatalkan
+    const selectableItems = currentItems.filter(
+      item => item.status_reservasi !== 'selesai' && item.status_reservasi !== 'dibatalkan'
+    )
+    
+    if (selectedReservations.length === selectableItems.length) {
+      setSelectedReservations([])
+    } else {
+      setSelectedReservations(selectableItems.map(item => item.id))
+    }
+  }
+
+  // Add new handler for bulk status update
+  const handleBulkConfirm = async () => {
+    setIsLoading(true)
+    try {
+      const token = localStorage.getItem("token")
+      
+      const promises = selectedReservations.map(async (id) => {
+        const response = await fetch(`${apiUrl}/api/reservasi/confirm/${id}`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Accept": "application/json",
+            "Authorization": `Bearer ${token}`,
+          },
+          body: JSON.stringify({ status: selectedStatus }),
+        })
+        return response
+      })
+      
+      const results = await Promise.all(promises)
+      const failedUpdates = results.filter(r => !r.ok).length
+      
+      if (failedUpdates > 0) {
+        toast.error(`Gagal mengubah ${failedUpdates} status reservasi`)
+      } else {
+        toast.success("Semua status berhasil diperbarui")
+        setSelectedReservations([])
+        setIsBulkConfirmOpen(false)
+        fetchReservations()
+      }
+    } catch (error) {
+      console.error("Failed to update statuses:", error)
+      toast.error("Gagal mengubah status reservasi")
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   return (
     <SidebarProvider>
@@ -962,6 +1117,16 @@ export default function Page() {
                   {/* Results Counter */}
                   <div className="text-sm text-gray-500">
                     Menampilkan {filteredData.length} dari {data.length} reservasi
+                    {selectedReservations.length > 0 && currentUser?.role === 'admin' && (
+                      <Button
+                        onClick={() => setIsBulkConfirmOpen(true)}
+                        size="sm"
+                        className="ml-4 inline-flex items-center gap-2"
+                      >
+                        <CheckCircle className="h-4 w-4" />
+                        Update Status ({selectedReservations.length} dipilih)
+                      </Button>
+                    )}
                   </div>
                 </div>
 
@@ -990,6 +1155,12 @@ export default function Page() {
                       <table className="w-full border-collapse bg-white rounded-lg shadow-sm">
                         <thead>
                           <tr className="border-b bg-gray-50">
+                            <th className="p-3 text-left text-sm font-medium text-gray-900">
+                              <Checkbox
+                                checked={selectedReservations.length === currentItems.length}
+                                onCheckedChange={handleSelectAll}
+                              />
+                            </th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">No</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Fasilitas</th>
                             <th className="p-3 text-left text-sm font-medium text-gray-900">Acara</th>
@@ -1004,6 +1175,13 @@ export default function Page() {
                         <tbody>
                           {currentItems.map((item, index) => (
                             <tr key={item.id} className="border-b hover:bg-gray-50">
+                              <td className="p-3">
+                                <Checkbox
+                                  checked={selectedReservations.includes(item.id)}
+                                  onCheckedChange={() => handleSelectReservation(item.id)}
+                                  disabled={item.status_reservasi === 'selesai' || item.status_reservasi === 'dibatalkan'}
+                                />
+                              </td>
                               <td className="p-3 text-sm text-gray-900 text-left">
                                 {indexOfFirstItem + index + 1}
                               </td>
@@ -1045,51 +1223,45 @@ export default function Page() {
                                     <Eye className="h-4 w-4" />
                                   </Button>
                                   
-                                  {canEditReservation(item) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleEdit(item)}
-                                      className="h-8 w-8 p-0"
-                                    >
-                                      <Edit className="h-4 w-4" />
-                                    </Button>
+                                  {/* Only show edit/confirm/update buttons if not selesai or dibatalkan */}
+                                  {item.status_reservasi !== 'selesai' && item.status_reservasi !== 'dibatalkan' && (
+                                    <>
+                                      {canEditReservation(item) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleEdit(item)}
+                                          className="h-8 w-8 p-0"
+                                        >
+                                          <Edit className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                      
+                                      {canConfirmReservation(item) && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleConfirmClick(item)}
+                                          className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
+                                        >
+                                          <CheckCircle className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                      
+                                      {/* Auto Status Update for specific reservation - Admin only */}
+                                      {currentUser?.role === 'admin' && (
+                                        <Button
+                                          variant="ghost"
+                                          size="sm"
+                                          onClick={() => handleUpdateSingleStatus(item)}
+                                          className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
+                                          title="Update Status Otomatis"
+                                        >
+                                          <Clock className="h-4 w-4" />
+                                        </Button>
+                                      )}
+                                    </>
                                   )}
-                                  
-                                  {canConfirmReservation(item) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleConfirmClick(item)}
-                                      className="h-8 w-8 p-0 text-green-600 hover:text-green-700"
-                                    >
-                                      <CheckCircle className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  
-                                  {/* Auto Status Update for specific reservation - Admin only */}
-                                  {currentUser?.role === 'admin' && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleUpdateSingleStatus(item)}
-                                      className="h-8 w-8 p-0 text-blue-600 hover:text-blue-700"
-                                      title="Update Status Otomatis"
-                                    >
-                                      <Clock className="h-4 w-4" />
-                                    </Button>
-                                  )}
-                                  
-                                  {/* {canDeleteReservation(item) && (
-                                    <Button
-                                      variant="ghost"
-                                      size="sm"
-                                      onClick={() => handleDeleteClick(item)}
-                                      className="h-8 w-8 p-0 text-red-600 hover:text-red-700"
-                                    >
-                                      <Trash2 className="h-4 w-4" />
-                                    </Button>
-                                  )} */}
                                 </div>
                               </td>
                             </tr>
@@ -1287,38 +1459,6 @@ export default function Page() {
                 </div>
               )}
 
-              {/* User Selection (only for admin on new reservations) */}
-              {!isEditing && currentUser?.role === 'admin' && (
-                <div>
-                  <Label htmlFor="user_id">User</Label>
-                  <Select onValueChange={(value) => handleSelectChange("user_id", value)} value={formData.user_id}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Pilih user (kosongkan untuk diri sendiri)" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {users.map(user => (
-                        <SelectItem key={user.id} value={user.id.toString()}>
-                          {user.name} - {user.email}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
-
-              {/* Tanggal Reservasi */}
-              <div>
-                <Label htmlFor="tgl_reservasi">Tanggal Reservasi *</Label>
-                <Input
-                  type="date"
-                  id="tgl_reservasi"
-                  name="tgl_reservasi"
-                  value={formData.tgl_reservasi}
-                  onChange={handleInputChange}
-                  min={new Date().toISOString().split('T')[0]}
-                />
-              </div>
-
               {/* Sesi Selection */}
               <div>
                 <Label>Sesi *</Label>
@@ -1375,10 +1515,17 @@ export default function Page() {
             </div>
 
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsAddModalOpen(false)}>
+              <Button 
+                variant="outline" 
+                onClick={() => setIsAddModalOpen(false)}
+              >
                 Batal
               </Button>
-              <Button onClick={handleFormSubmit} disabled={isLoading}>
+              <Button 
+                variant="default"
+                onClick={handleFormSubmit} 
+                disabled={isLoading}
+              >
                 {isLoading ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -1475,6 +1622,54 @@ export default function Page() {
                   </>
                 ) : (
                   "Konfirmasi"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Update Status Reservasi Dialog - Bulk Action */}
+        <Dialog open={isBulkConfirmOpen} onOpenChange={setIsBulkConfirmOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Update Status Reservasi</DialogTitle>
+              <DialogDescription>
+                Ubah status untuk {selectedReservations.length} reservasi terpilih.
+              </DialogDescription>
+            </DialogHeader>
+            
+            <div className="space-y-4">
+              <div>
+                <Label htmlFor="bulk_status">Status Baru</Label>
+                <Select onValueChange={handleStatusChange} value={selectedStatus}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Pilih status baru" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="disetujui">Disetujui</SelectItem>
+                    <SelectItem value="ditolak">Ditolak</SelectItem>
+                    <SelectItem value="menunggu lunas">Menunggu Lunas</SelectItem>
+                    <SelectItem value="siap digunakan">Siap Digunakan</SelectItem>
+                    <SelectItem value="sedang berlangsung">Sedang Berlangsung</SelectItem>
+                    <SelectItem value="selesai">Selesai</SelectItem>
+                    <SelectItem value="dibatalkan">Dibatalkan</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsBulkConfirmOpen(false)}>
+                Batal
+              </Button>
+              <Button onClick={handleBulkConfirm} disabled={isLoading}>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Menyimpan...
+                  </>
+                ) : (
+                  "Update Status"
                 )}
               </Button>
             </DialogFooter>

@@ -458,7 +458,7 @@ export default function ReservasiPage() {
             <StatusDisplay 
               color="text-gray-600" 
               icon={CheckCircle} 
-              text="Selesai" 
+              text="Reservasi Telah Selesai" 
             />
           </ButtonContainer>
         );
@@ -469,7 +469,7 @@ export default function ReservasiPage() {
             <StatusDisplay 
               color="text-red-600" 
               icon={XCircle} 
-              text="Dibatalkan" 
+              text="Resevasi Dibatalkan" 
             />
           </ButtonContainer>
         );
@@ -480,7 +480,7 @@ export default function ReservasiPage() {
             <StatusDisplay 
               color="text-gray-600" 
               icon={AlertCircle} 
-              text="Menunggu proses" 
+              text="Menunggu Persetujuan" 
             />
           </ButtonContainer>
         );

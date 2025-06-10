@@ -116,7 +116,8 @@ export function AppSidebar() {
     },
     {
       title: "Berita",
-      url: "/dashboard/berita",
+      // url: "/dashboard/berita",
+      url: "#",
       icon: Newspaper,
       items: [],
     },
