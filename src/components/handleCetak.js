@@ -1,6 +1,9 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+  const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+
+
 export async function handleCetak(filterType, filterDate) {
   const token = localStorage.getItem("token");
   if (!token) {
@@ -11,7 +14,7 @@ export async function handleCetak(filterType, filterDate) {
   try {
     const params = new URLSearchParams({ filterType, filterDate });
     const res = await fetch(
-      `http://localhost:8000/api/keuangan-laporan?${params.toString()}`,
+      `${apiUrl}/api/keuangan-laporan?${params.toString()}`,
       {
         headers: { Authorization: `Bearer ${token}` },
       }

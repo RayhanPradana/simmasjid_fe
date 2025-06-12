@@ -692,7 +692,7 @@ export default function Page() {
                         <div className="px-4 py-3 col-span-1">
                           {item.gambar ? (
                             <img
-                              src={`http://127.0.0.1:8000/storage/${item.gambar}`}
+                              src={`${apiUrl}/storage/${item.gambar}`}
                               alt="Fasilitas"
                               className="h-16 w-16 object-cover rounded-md"
                               onError={(e) => {
@@ -864,7 +864,7 @@ export default function Page() {
                       <div className="col-span-2">
                         {detailItem.gambar ? (
                           <img
-                            src={`http://127.0.0.1:8000/storage/${detailItem.gambar}`}
+                            src={`${apiUrl}/storage/${detailItem.gambar}`}
                             alt="Fasilitas"
                             className="max-w-[200px] rounded-md"
                             onError={(e) => {

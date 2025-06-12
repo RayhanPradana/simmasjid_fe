@@ -1052,7 +1052,7 @@ export default function Page() {
                     </Label>
                     <div className="mt-2">
                       <img 
-                        src={`http://127.0.0.1:8000/storage/${detailItem.bukti_transfer}`}
+                        src={`${apiUrl}/storage/${detailItem.bukti_transfer}`}
                         alt="Bukti Transfer" 
                         className="max-w-full h-auto max-h-48 rounded border"
                         onError={(e) => {
