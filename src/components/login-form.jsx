@@ -16,12 +16,22 @@ export function LoginForm({ className, ...props }) {
     email: "",
     password: "",
   });
-  const [error, setError] = useState(null);
+  const [errors, setErrors] = useState({}); // Mengubah error menjadi errors (objek)
+  const [generalError, setGeneralError] = useState(null); // Untuk error umum
 
   const router = useRouter();
 
   const handleChange = (e) => {
     setForm({ ...form, [e.target.id]: e.target.value });
+    // Hapus error spesifik untuk field yang sedang diubah
+    if (errors[e.target.id]) {
+      setErrors((prevErrors) => {
+        const newErrors = { ...prevErrors };
+        delete newErrors[e.target.id];
+        return newErrors;
+      });
+    }
+    setGeneralError(null); // Hapus general error saat mulai mengetik
   };
 
   const [showPassword, setShowPassword] = useState(false);
@@ -29,7 +39,8 @@ export function LoginForm({ className, ...props }) {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError(null);
+    setErrors({}); // Bersihkan error sebelumnya
+    setGeneralError(null); // Bersihkan general error sebelumnya
 
     try {
       // Dapatkan CSRF token dari Sanctum
@@ -53,16 +64,24 @@ export function LoginForm({ className, ...props }) {
         localStorage.setItem("token", data.access_token);
         localStorage.setItem("user", JSON.stringify(data.user));
 
-        //alert("Login berhasil!");
         toast.success("🎉 Login berhasil! Selamat datang kembali.");
         const redirectPath = new URL(data.redirect).pathname;
         router.push(redirectPath);
       } else {
-        setError(data.message || "Login gagal.");
+        // Tangani error dari backend
+        if (data.errors) {
+          // Jika backend mengirim error validasi
+          setErrors(data.errors);
+        } else if (data.message) {
+          // Jika backend mengirim pesan error umum
+          setGeneralError(data.message);
+        } else {
+          setGeneralError("Login gagal. Silakan coba lagi.");
+        }
       }
     } catch (err) {
       console.error(err);
-      setError("Gagal terhubung ke server.");
+      setGeneralError("Gagal terhubung ke server. Mohon periksa koneksi internet Anda.");
     }
   };
 
@@ -90,22 +109,27 @@ export function LoginForm({ className, ...props }) {
                 <Label htmlFor="email">Email</Label>
                 <Input
                   id="email"
-                  type="email"
                   placeholder="m@contoh.com"
                   value={form.email}
                   onChange={handleChange}
-                  required
+                  className={errors.email ? "border-red-500" : ""} // Tambahkan border merah jika ada error
                 />
+                {errors.email && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.email[0]}
+                  </p>
+                )}
               </div>
               <div className="grid gap-3">
+                <Label htmlFor="password">Password</Label>
                 <div className="relative">
                   <Input
                     id="password"
                     type={showPassword ? "text" : "password"}
                     value={form.password}
+                    placeholder="Masukkan password"
                     onChange={handleChange}
-                    required
-                    className="pr-10"
+                    className={errors.password ? "border-red-500 pr-10" : "pr-10"} // Tambahkan border merah jika ada error
                   />
                   <button
                     type="button"
@@ -116,10 +140,15 @@ export function LoginForm({ className, ...props }) {
                     {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
                   </button>
                 </div>
+                {errors.password && (
+                  <p className="text-sm text-red-500 mt-1">
+                    {errors.password[0]}
+                  </p>
+                )}
               </div>
 
-              {error && (
-                <div className="text-sm text-red-500 text-center">{error}</div>
+              {generalError && (
+                <div className="text-sm text-red-500 text-center">{generalError}</div>
               )}
 
               <Button type="submit" className="w-full">

@@ -110,7 +110,6 @@ export function RegisterForm({ className, ...props }) {
                   type="text"
                   value={form.name}
                   onChange={handleChange}
-                  required
                 />
                 {error?.name && (
                   <p className="text-xs text-red-500 mt-1">{error.name[0]}</p>
@@ -121,10 +120,8 @@ export function RegisterForm({ className, ...props }) {
                 <Label htmlFor="email">Email<span className="text-red-500">*</span></Label>
                 <Input
                   id="email"
-                  type="email"
                   value={form.email}
                   onChange={handleChange}
-                  required
                 />
                 {error?.email && (
                   <p className="text-xs text-red-500 mt-1">{error.email[0]}</p>
@@ -180,7 +177,6 @@ export function RegisterForm({ className, ...props }) {
                     type={showPassword ? "text" : "password"}
                     value={form.password}
                     onChange={handleChange}
-                    required
                   />
                   {error?.password && (
                     <p className="text-xs text-red-500 mt-1">
@@ -205,7 +201,6 @@ export function RegisterForm({ className, ...props }) {
                     type={showConfirmPassword ? "text" : "password"}
                     value={form.confirmPassword}
                     onChange={handleChange}
-                    required
                   />
                   {error?.password_confirmation && (
                     <p className="text-xs text-red-500 mt-1">{error.password_confirmation[0]}
