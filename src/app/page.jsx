@@ -13,6 +13,17 @@ import toast from "react-hot-toast";
 import axios from 'axios';
 import Marquee from 'react-fast-marquee';
 import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   NavigationMenu,
   NavigationMenuList,
   NavigationMenuItem,
@@ -156,6 +167,7 @@ export default function Page() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [prayerTimes, setPrayerTimes] = useState(null);
   const [currentCity, setCurrentCity] = useState('Malang');
+  const [openDialog, setOpenDialog] = useState(false);
   
   const sections = [
     { id: "home", label: "Beranda", icon: <Home size={16} /> },
@@ -433,12 +445,33 @@ export default function Page() {
                   <User className="mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="cursor-pointer"
-                >
-                  <LogOut size={16} className="mr-2" /> Logout
+                <AlertDialog open={openDialog} onOpenChange={setOpenDialog}>
+              <AlertDialogTrigger asChild>
+                <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                  <LogOut className="mr-2" />
+                  Log out
                 </DropdownMenuItem>
+              </AlertDialogTrigger>
+              <AlertDialogContent>
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Konfirmasi Logout</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Apakah Anda yakin ingin logout?
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter>
+                  <AlertDialogCancel>Batal</AlertDialogCancel>
+                  <AlertDialogAction
+                    onClick={() => {
+                      setOpenDialog(false);
+                      handleLogout();
+                    }}
+                  >
+                    Ya, Logout
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
