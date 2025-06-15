@@ -12,6 +12,17 @@ import toast from "react-hot-toast";
 import { ChevronsUpDown, Settings } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogFooter,
+  AlertDialogTitle,
+  AlertDialogDescription,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from "@/components/ui/alert-dialog";
+import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
@@ -27,12 +38,7 @@ import {
   CardTitle,
   CardDescription,
 } from "@/components/ui/card";
-import {
-  BookOpen,
-  Calendar as CalendarIcon,
-  User,
-  LogOut,
-} from "lucide-react";
+import { BookOpen, Calendar as CalendarIcon, User, LogOut } from "lucide-react";
 import useAuthRedirect from "@/lib/auth";
 
 export default function Page() {
@@ -55,6 +61,7 @@ export default function Page() {
   const [phone, setPhone] = useState("");
   const [address, setAddress] = useState("");
   const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://127.0.0.1:8000";
+  const [openDialog, setOpenDialog] = useState(false);
 
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -347,18 +354,37 @@ export default function Page() {
               <DropdownMenuContent className="w-56">
                 <DropdownMenuLabel>Akun</DropdownMenuLabel>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem
-                  onClick={() => router.push("/profile")}
-                >
+                <DropdownMenuItem onClick={() => router.push("/profile")}>
                   <User className="mr-2" />
                   Profile
                 </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleLogout}
-                  className="cursor-pointer"
-                >
-                  <LogOut size={16} className="mr-2" /> Logout
-                </DropdownMenuItem>
+                <AlertDialog open={openDialog} onOpenChange={setOpenDialog}>
+                  <AlertDialogTrigger asChild>
+                    <DropdownMenuItem onSelect={(e) => e.preventDefault()}>
+                      <LogOut className="mr-2" />
+                      Log out
+                    </DropdownMenuItem>
+                  </AlertDialogTrigger>
+                  <AlertDialogContent>
+                    <AlertDialogHeader>
+                      <AlertDialogTitle>Konfirmasi Logout</AlertDialogTitle>
+                      <AlertDialogDescription>
+                        Apakah Anda yakin ingin logout?
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                      <AlertDialogCancel>Batal</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={() => {
+                          setOpenDialog(false);
+                          handleLogout();
+                        }}
+                      >
+                        Ya, Logout
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
@@ -507,7 +533,7 @@ export default function Page() {
               </Card>
               <div className="flex justify-between items-center space-x-2">
                 <Button
-                  className="bg-blue-600 hover:bg-blue-700" 
+                  className="bg-blue-600 hover:bg-blue-700"
                   onClick={() => router.push("/")}
                 >
                   Kembali ke Beranda
